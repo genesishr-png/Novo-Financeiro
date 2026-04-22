@@ -79,34 +79,33 @@ export class ReportHandler {
 					}
 				});
 
-				detailedPayments.sort((a, b) => a.date - b.date);
-				const totalGeral = totalParcelas + totalExito;
-				const totalContratos = Object.values(newContractsByMonth).reduce((a, b) => a + b, 0);
+												let totalReceitasAvulsas = 0;
+				let totalDespesas = 0;
 
-				return { totalParcelas, totalExito, totalGeral, totalContratos, totalVencido, detailedPayments, byAdvogado, byMonth, vencidoByMonth, newContractsByMonth };
-			}
-			getDefaultersInMonth(month, year, contracts) {
-				const defaulters = [];
-				const startMonth = new Date(year, month, 1);
-				const endMonth = new Date(year, month + 1, 0, 23, 59, 59);
-
-				contracts.forEach(c => {
-					if (!c.parcels) return;
-					c.parcels.forEach(p => {
-						const dueDate = new Date(p.dueDate);
-						const hoje = new Date();
-						// LÃ³gica: Venceu neste mÃªs + Status Ã© Pendente + Data jÃ¡ passou
-						if (dueDate >= startMonth && dueDate <= endMonth && p.status === 'Pendente' && dueDate < hoje) {
-							defaulters.push({
-								client: c.clientName,
-								advogado: c.advogadoResponsavel,
-								dueDate: dueDate,
-								value: p.value,
-								parcelNum: `${p.number}/${c.parcels.length}`
-							});
+				if (this.app.isUserAdmin) {
+					// [NOVO] Integração de Receitas Avulsas
+					const extraRevenues = this.app.database.extraRevenues || [];
+					extraRevenues.forEach(rev => {
+						const d = new Date(rev.date + 'T12:00:00Z');
+						if (d >= startDate && d <= endDate) {
+							totalReceitasAvulsas += rev.value;
+							detailedPayments.push({ type: 'Receita Avulsa', clientName: rev.origin, date: d, value: rev.value, advogado: '-' });
+							addData(byMonth, d, rev.value);
 						}
 					});
-				});
+
+					// [NOVO] Integração de Despesas do Escritório
+					const officeExpenses = this.app.database.officeExpenses || [];
+					officeExpenses.forEach(exp => {
+						if (exp.status === 'Pago' && exp.paymentDate) {
+							const d = new Date(exp.paymentDate + 'T12:00:00Z');
+							if (d >= startDate && d <= endDate) {
+								totalDespesas += exp.value;
+								detailedPayments.push({ type: 'Despesa Escritório', clientName: exp.description, date: d, value: -exp.value, advogado: '-' });
+							}
+						}
+					});
+				}
 				return defaulters;
 			}
 			// [FIM DA ALTERAÃ‡ÃƒO]
@@ -136,7 +135,7 @@ export class ReportHandler {
 				const startDate = new Date(year, month, 1);
 				const endDate = new Date(year, month + 1, 0, 23, 59, 59); // Fim do mÃªs
 				const data = this.calculateIncomeByDateRange(startDate, endDate, contractsToRender);
-				return { totalParcelas: data.totalParcelas, totalExito: data.totalExito, totalGeral: data.totalGeral, detailedPayments: data.detailedPayments };
+				return { totalParcelas: data.totalParcelas, totalExito: data.totalExito, totalGeral: data.totalGeral, saldoLiquido: data.saldoLiquido, totalDespesas: data.totalDespesas, detailedPayments: data.detailedPayments };
 			}
 
 			getActualIncomeData(contractsToRender) {
@@ -179,3 +178,5 @@ export class ReportHandler {
 				return { labels, data };
 			}
 		}
+
+

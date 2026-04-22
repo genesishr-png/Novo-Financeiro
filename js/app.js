@@ -2599,24 +2599,24 @@ class App {
 				container.className = "grid grid-cols-1 md:grid-cols-5 gap-4";
 				container.innerHTML = `
 					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 border-green-500">
-						<h3 class="text-xs font-semibold text-gray-400 uppercase">Faturação Total</h3>
+						<h3 class="text-xs font-semibold text-gray-400 uppercase" title="Parcelas + Êxitos + Avulsas">Total Receitas</h3>
 						<p class="text-2xl font-bold text-green-400 mt-1">${Utils.formatCurrency(data.totalGeral)}</p>
 					</div>
-					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 border-gray-600">
-						<h3 class="text-xs font-semibold text-gray-400 uppercase">Parc. Recebidas</h3>
-						<p class="text-xl font-bold text-white mt-1">${Utils.formatCurrency(data.totalParcelas)}</p>
+					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 border-red-500">
+						<h3 class="text-xs font-semibold text-gray-400 uppercase">Total Despesas</h3>
+						<p class="text-xl font-bold text-red-400 mt-1">- ${Utils.formatCurrency(data.totalDespesas)}</p>
+					</div>
+					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 ${data.saldoLiquido >= 0 ? 'border-blue-500' : 'border-red-600'}">
+						<h3 class="text-xs font-semibold text-gray-400 uppercase">Saldo Líquido</h3>
+						<p class="text-2xl font-bold ${data.saldoLiquido >= 0 ? 'text-blue-400' : 'text-red-500'} mt-1">${Utils.formatCurrency(data.saldoLiquido)}</p>
+					</div>
+					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 border-yellow-500 bg-yellow-900/10">
+						<h3 class="text-xs font-semibold text-yellow-500 uppercase">Inadimplência</h3>
+						<p class="text-xl font-bold text-yellow-500 mt-1">${Utils.formatCurrency(data.totalVencido)}</p>
 					</div>
 					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 border-indigo-500">
-						<h3 class="text-xs font-semibold text-gray-400 uppercase">Êxito Recebido</h3>
-						<p class="text-xl font-bold text-indigo-400 mt-1">${Utils.formatCurrency(data.totalExito)}</p>
-					</div>
-					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 border-red-500 bg-red-900/10">
-						<h3 class="text-xs font-semibold text-red-300 uppercase">Total em Atraso</h3>
-						<p class="text-xl font-bold text-red-500 mt-1">${Utils.formatCurrency(data.totalVencido)}</p>
-					</div>
-					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 border-blue-500">
 						<h3 class="text-xs font-semibold text-gray-400 uppercase">Novos Contratos</h3>
-						<p class="text-xl font-bold text-blue-400 mt-1">${data.totalContratos}</p>
+						<p class="text-xl font-bold text-indigo-400 mt-1">${data.totalContratos}</p>
 					</div>
 				`;
 			}
@@ -2797,10 +2797,11 @@ class App {
 					startY: 50,
 					head: [['Métrica', 'Valor']],
 					body: [
-						['Faturação Total', Utils.formatCurrency(data.totalGeral)],
-						['Total Recebido (Parcelas)', Utils.formatCurrency(data.totalParcelas)],
-						['Total Recebido (Êxito)', Utils.formatCurrency(data.totalExito)],
-						['Novos Contratos no Período', data.totalContratos],
+						['Total Receitas', Utils.formatCurrency(data.totalGeral)],
+						['Total Despesas', Utils.formatCurrency(data.totalDespesas || 0)],
+						['Saldo Líquido', Utils.formatCurrency(data.saldoLiquido || 0)],
+						['Inadimplência', Utils.formatCurrency(data.totalVencido)],
+						['Novos Contratos', data.totalContratos],
 					],
 					theme: 'grid',
 					headStyles: { fillColor: [79, 70, 229] } // Índigo
