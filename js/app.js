@@ -17,6 +17,7 @@ class App {
 					contracts: [],
 					notifications: [], // [MUDANÇA v5]
 					officeExpenses: [], // [NOVO]
+					extraRevenues: [], // [FIX] Inicializado aqui para evitar crash
 					// [INÍCIO DA ALTERAÇÃO - OFICINA]
 					// Inicia com um objeto padrão para advogados.
 					// O listener do systemSettings irá preencher isso.
@@ -126,6 +127,10 @@ class App {
 				document.getElementById('formExito').addEventListener('submit', this.handleExitoSubmit.bind(this));
 				const formDespesa = document.getElementById('formDespesa');
 				if (formDespesa) formDespesa.addEventListener('submit', this.handleDespesaSubmit.bind(this)); // [NOVO]
+
+				// [FIX] Registrar submit do form de Receitas Avulsas
+				const formReceita = document.getElementById('formReceitaAvulsa');
+				if (formReceita) formReceita.addEventListener('submit', this.handleReceitaSubmit.bind(this));
 
 				const viewToggleButton = document.getElementById('view-toggle-button');
 				if (viewToggleButton) {
@@ -292,6 +297,7 @@ class App {
 						// [FIM DA ALTERAÇÃO - OFICINA]
 						if (this.isUserAdmin) {
 							this.firebaseService.startOfficeExpensesListener();
+							this.firebaseService.startExtraRevenuesListener(); // [FIX] Listener de receitas
 						}
 					}
 				} else {
