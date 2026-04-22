@@ -10,10 +10,7 @@ import { DOMBuilder } from './dom-builder.js';
 const ADMIN_USERS = ["dra. renata fabris", "Darc", "dr. felipe gurjão", "lilian"];
 const CONTRACTS_PER_PAGE = 12;
 
-class App
-		 * @description Classe principal que gere o estado e a lógica do dashboard
-		 */
-		class App {
+class App {
 			constructor() {
 				// Estado da Aplicação
 				this.database = {

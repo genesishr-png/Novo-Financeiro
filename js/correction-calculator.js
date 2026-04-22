@@ -1,10 +1,4 @@
-export class CorrectionCalculator
-		 * [NOVO v5.5] Esta classe foi totalmente refatorada.
-		 * Ela não busca mais na internet (removendo o bug 429).
-		 * Ela usa uma tabela interna (IPCA_TABLE) para cálculos.
-		 * Isso torna o app mais rápido e 100% confiável.
-		 */
-		class CorrectionCalculator {
+export class CorrectionCalculator {
 			constructor() {
 				// Valores do IPCA (em %) - https://www.bcb.gov.br/pec/Indeco/IEP/ipedida.asp?id=433
 				// Você deve atualizar esta tabela manualmente a cada novo mês para manter a precisão.

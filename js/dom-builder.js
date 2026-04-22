@@ -1,8 +1,6 @@
 import { Utils } from './utils.js';
 
-export class DOMBuilder
-		 */
-		class DOMBuilder {
+export class DOMBuilder {
 			constructor(appInstance) {
 				this.app = appInstance;
 			}

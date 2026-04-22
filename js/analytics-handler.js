@@ -1,6 +1,4 @@
-export class AnalyticsHandler
-		 */
-		class AnalyticsHandler {
+export class AnalyticsHandler {
 			constructor() {
 				this.actualIncomeChartInstance = null;
 				this.projectedIncomeChartInstance = null;

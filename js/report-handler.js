@@ -1,8 +1,6 @@
 import { Utils } from './utils.js';
 
-export class ReportHandler
-		 */
-		class ReportHandler {
+export class ReportHandler {
 			constructor(appInstance) {
 				this.app = appInstance;
 			}

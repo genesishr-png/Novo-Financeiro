@@ -1,9 +1,7 @@
 import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, setLogLevel, writeBatch, serverTimestamp, query, where, orderBy, limit, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { Utils } from './utils.js';
 
-export class FirebaseService
-		 */
-		class FirebaseService {
+export class FirebaseService {
 			constructor(appInstance) {
 				this.app = appInstance;
 				this.db = null;

@@ -1,8 +1,6 @@
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-export class AuthService
-		 */
-		class AuthService {
+export class AuthService {
 			constructor(appInstance) {
 				this.app = appInstance;
 				this.auth = null;
