@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Sistema de Gestão Financeira - Advocacia</title>
+	<script src="https://cdn.tailwindcss.com"></script>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.min.css">
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	<!-- [AI AGENT INTEGRATION] -->
+	<script src="js/ai_agent.js"></script>
+	<link rel="stylesheet" href="css/styles.css">
+
+</head>
+
+<body class="text-gray-300">
+	<div id="notifications"></div>
+
+	<div id="loading-overlay">
+		<i class="fas fa-spinner fa-spin mr-3"></i> A ligar...
+	</div>
+
+	<div id="auth-overlay"
+		class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden px-4">
+		<div class="absolute inset-0 opacity-5">
+			<div
+				class="absolute inset-0 bg-[url('https://i.postimg.cc/x81V8QJg/Imagem-do-Whats-App-de-2025-10-27-a-s-09-49-28-f966cd35.jpg')] bg-cover bg-center">
+			</div>
+		</div>
+		<div
+			class="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-blue-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-blob">
+		</div>
+		<div class="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-blob"
+			style="animation-delay: 2s;"></div>
+		<div class="relative z-10 w-full max-w-md">
+			<div class="mb-8 text-center">
+				<img src="https://www.fabrisegurjao.adv.br/netpage/data/uploads/2019/12/logo-fabris-e-gurjao-491x325px.png"
+					alt="Logótipo Fabris e Gurjão" class="h-24 mx-auto mb-6 drop-shadow-lg" />
+				<h1 class="text-3xl font-bold text-white mb-2">
+					Sistema Financeiro
+				</h1>
+				<p class="text-gray-300 text-sm">
+					Gestão profissional para advocacia
+				</p>
+			</div>
+			<div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 shadow-2xl">
+				<form id="login-form" class="space-y-5">
+					<div>
+						<label for="login-email" class="block text-sm font-medium text-gray-100 mb-2">
+							Email
+						</label>
+						<div class="relative">
+							<i class="fas fa-envelope absolute left-3 top-3.5 text-gray-400"></i>
+							<input type="email" id="login-email" placeholder="seu@email.com"
+								class="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+								required />
+						</div>
+					</div>
+					<div>
+						<label for="login-password" class="block text-sm font-medium text-gray-100 mb-2">
+							Senha
+						</label>
+						<div class="relative">
+							<i class="fas fa-lock absolute left-3 top-3.5 text-gray-400"></i>
+							<input type="password" id="login-password" placeholder="••••••••"
+								class="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+								required />
+						</div>
+					</div>
+					<div id="auth-error"
+						class="hidden p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-sm">
+					</div>
+					<button type="submit" id="login-submit-button"
+						class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition duration-200 flex items-center justify-center gap-2 mt-6">
+						<i id="login-button-icon" class="fas fa-sign-in-alt"></i>
+						<span id="login-button-text">Entrar no Sistema</span>
+					</button>
+				</form>
+				<div class="mt-6 text-center text-gray-400 text-xs">
+					<p>Acesso restrito a utilizadores autorizados</p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="app-container" class="flex h-screen">
+
+		<aside id="sidebar"
+			class="hidden md:flex md:flex-col md:w-64 bg-gray-900/50 backdrop-blur-lg border-r border-gray-700/50 p-4 transition-all duration-300 z-20">
+			<div class="flex-shrink-0 mb-8">
+				<img src="https://www.fabrisegurjao.adv.br/netpage/data/uploads/2019/12/logo-fabris-e-gurjao-491x325px.png"
+					alt="Logótipo Fabris e Gurjão" class="h-20 mx-auto opacity-90" />
+			</div>
+
+			<nav class="flex-1 space-y-3">
+				<a onclick="window.App.showPage('page-dashboard')" id="tab-dashboard" class="sidebar-nav-item active">
+					<i class="fas fa-tachometer-alt w-5 text-center"></i>
+					<span>Painel Principal</span>
+				</a>
+
+				<a onclick="window.App.showPage('page-parcelas')" id="tab-parcelas" class="sidebar-nav-item">
+					<i class="fas fa-file-invoice-dollar w-5 text-center"></i>
+					<span>Parcelas</span>
+				</a>
+
+				<a onclick="window.App.showPage('page-servicos')" id="tab-servicos" class="sidebar-nav-item">
+					<i class="fas fa-tasks w-5 text-center"></i>
+					<span>Serviços</span>
+				</a>
+
+				<a onclick="window.App.showPage('page-performance')" id="tab-performance"
+					class="sidebar-nav-item admin-only">
+					<i class="fas fa-rocket w-5 text-center"></i>
+					<span>Performance</span>
+				</a>
+
+				<a onclick="window.App.showPage('page-relatorios')" id="tab-relatorios"
+					class="sidebar-nav-item admin-only">
+					<i class="fas fa-chart-pie w-5 text-center"></i>
+					<span>Relatórios</span>
+				</a>
+				<a onclick="window.App.showPage('page-lixeira')" id="tab-lixeira" class="sidebar-nav-item">
+					<i class="fas fa-trash-alt w-5 text-center"></i>
+					<span>Lixeira</span>
+				</a>
+
+				<div class="border-t border-gray-700 pt-3 mt-3 admin-only">
+					<a onclick="window.App.showPage('page-oficina')" id="tab-oficina"
+						class="sidebar-nav-item admin-only">
+						<i class="fas fa-cogs w-5 text-center"></i>
+						<span>Oficina</span>
+					</a>
+				</div>
+
+			</nav>
+
+			<div class="mt-auto flex-shrink-0 border-t border-gray-700 pt-4">
+				<div class="flex items-center gap-3 p-2 rounded-lg">
+					<div
+						class="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center font-bold text-white">
+						<i class="fas fa-user"></i>
+					</div>
+					<div>
+						<span id="user-display-name" class="text-sm text-gray-200 font-medium block"></span>
+						<button id="logout-button"
+							class="text-xs text-red-400 hover:text-red-300 transition-colors">Sair</button>
+					</div>
+				</div>
+			</div>
+		</aside>
+		<main id="main-content" class="flex-1 flex flex-col h-screen overflow-y-auto pb-24 md:pb-0">
+
+			<header class="sticky top-0 bg-gray-900/30 backdrop-blur-md border-b border-gray-700/50 p-4 z-10 md:p-6">
+				<div class="flex justify-between items-center">
+					<h1 id="page-title" class="text-2xl md:text-3xl font-bold text-white">Painel Principal</h1>
+
+					<div class="flex items-center gap-4">
+						<div class="relative">
+							<button id="notification-bell" class="p-2 text-gray-300 hover:text-white transition-colors">
+								<i class="fas fa-bell text-xl"></i>
+								<span id="notification-badge"
+									class="hidden absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900"></span>
+							</button>
+							<div id="notification-dropdown"
+								class="hidden absolute right-0 mt-2 w-80 md:w-96 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden z-50">
+								<div
+									class="flex justify-between items-center p-3 bg-gray-900/50 border-b border-gray-700">
+									<h3 class="font-semibold text-white">Notificações</h3>
+									<button id="clear-notifications-button"
+										class="text-xs text-indigo-400 hover:text-indigo-300">Marcar todas como
+										lidas</button>
+								</div>
+								<div id="notification-list" class="max-h-80 overflow-y-auto space-y-2 p-2">
+									<div id="notification-list-empty" class="hidden">
+										<i class="fas fa-check-circle text-gray-500 text-3xl mb-2"></i>
+										<p>Nenhuma notificação nova.</p>
+									</div>
+								</div>
+							</div>
+
+							<button id="date-filter-toggle"
+								class="p-2 text-gray-300 hover:text-white transition-colors ml-2"
+								title="Alternar: Todos / Legado / Novos">
+								<i class="fas fa-layer-group text-xl"></i>
+								<span id="date-filter-label"
+									class="text-xs font-bold ml-1 bg-indigo-600 px-1 rounded">TODOS</span>
+							</button>
+
+							<button id="mobile-menu-toggle" class="md:hidden p-2 text-gray-300 hover:text-white">
+								<i class="fas fa-bars text-xl"></i>
+							</button>
+						</div>
+					</div>
+			</header>
+
+			<div class="p-4 md:p-8 flex-1">
+
+				<div id="page-dashboard">
+					<div class="flex flex-wrap gap-4 mb-8">
+						<button onclick="window.App.openContractModal()"
+							class="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-2 px-5 rounded-lg shadow-lg transition-all duration-200 transform hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2">
+							<i class="fas fa-plus-circle"></i> Novo Contrato
+						</button>
+						<button onclick="window.App.openReportModal()"
+							class="admin-only bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-bold py-2 px-5 rounded-lg shadow-lg transition-all duration-200 transform hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2">
+							<i class="fas fa-chart-line"></i> Relatório Mensal
+						</button>
+					</div>
+
+					<div id="dashboard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+						<div
+							class="dark-card p-6 rounded-lg shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+							<h3 class="text-lg font-semibold text-gray-400">A Receber (Próx. 30 dias)</h3>
+							<p id="dash-a-receber" class="text-3xl font-bold text-green-400"></p>
+						</div>
+						<div
+							class="relative dark-card p-6 rounded-lg shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+							<div class="flex justify-between items-start">
+								<h3 class="text-lg font-semibold text-gray-400">Vencido (Corrigido)</h3>
+								<button id="toggle-debt-view"
+									class="hidden text-gray-500 hover:text-white transition-colors"
+									title="Ver Histórico Completo">
+									<i id="toggle-debt-icon" class="fas fa-filter"></i>
+								</button>
+							</div>
+							<p id="dash-vencido" class="text-3xl font-bold text-red-400"></p>
+						</div>
+						<div
+							class="dark-card p-6 rounded-lg shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+							<h3 class="text-lg font-semibold text-gray-400">Recebido (Este Mês)</h3>
+							<p id="dash-recebido" class="text-3xl font-bold text-indigo-400"></p>
+						</div>
+						<div
+							class="dark-card p-6 rounded-lg shadow-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+							<h3 class="text-lg font-semibold text-gray-400">Meus Contratos Ativos</h3>
+							<p id="dash-contratos" class="text-3xl font-bold text-white"></p>
+						</div>
+					</div>
+					<div class="mb-4 border-b border-gray-700">
+						<h2 class="text-2xl font-semibold mb-4 text-white">Situação das Parcelas (Meus Contratos)</h2>
+					</div>
+
+					<div id="kanban-board" class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-4">
+						<div class="kanban-column dark-card shadow-lg rounded-lg p-4 flex-1">
+							<h3 class="font-bold text-lg mb-4 text-red-400 flex items-center gap-2"><i
+									class="fas fa-exclamation-triangle"></i>Vencidas</h3>
+							<div id="kanban-vencidas" class="kanban-content space-y-3"></div>
+						</div>
+						<div class="kanban-column dark-card shadow-lg rounded-lg p-4 flex-1">
+							<h3 class="font-bold text-lg mb-4 text-yellow-400 flex items-center gap-2"><i
+									class="far fa-clock"></i>A Vencer (Próx. 30 dias)</h3>
+							<div id="kanban-a-vencer" class="kanban-content space-y-3"></div>
+						</div>
+						<div class="kanban-column dark-card shadow-lg rounded-lg p-4 flex-1">
+							<h3 class="font-bold text-lg mb-4 text-gray-400 flex items-center gap-2"><i
+									class="fas fa-check-circle"></i>Pagas (Este Mês)</h3>
+							<div id="kanban-pagas" class="kanban-content space-y-3"></div>
+						</div>
+					</div>
+
+					<div id="exito-section" class="mt-12">
+						<div class="mb-4 border-b border-gray-700">
+							<h2 class="text-2xl font-semibold mb-4 text-white">Bonificações de Êxito Pendentes</h2>
+						</div>
+						<div id="kanban-exito-wrapper" class="flex overflow-x-auto space-x-6 pb-4 items-start">
+						</div>
+					</div>
+
+					<div class="mt-12">
+						<div
+							class="flex flex-wrap justify-between items-center mb-4 border-b border-gray-700 pb-4 gap-4">
+							<h2 class="text-2xl font-semibold text-white">Meus Contratos</h2>
+							<div class="flex flex-wrap items-center gap-4">
+								<button onclick="window.App.exportContractsCSV()"
+									class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-2 px-3 rounded-lg shadow-lg transition-all duration-200 transform hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2 text-sm">
+									<i class="fas fa-file-csv"></i> Exportar (CSV)
+								</button>
+								<select id="advogadoFilter" onchange="window.App.resetAndRenderContractList()"
+									class="filter-select admin-only focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"></select>
+
+								<div class="flex items-center gap-2">
+									<span class="text-sm text-gray-400">Mostrar:</span>
+									<div id="contractStatusFilterButtons" class="flex gap-1">
+									</div>
+								</div>
+
+								<div class="flex items-center gap-2">
+									<span class="text-sm text-gray-400">Ordenar por:</span>
+									<div id="contractSortButtons" class="flex gap-1"></div>
+								</div>
+							</div>
+						</div>
+						<div class="mb-4">
+							<input type="text" id="searchInput"
+								placeholder="🔎 Pesquisar por cliente ou tipo de serviço..."
+								class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200">
+						</div>
+						<div id="contractListContainer"></div>
+
+						<div id="paginationContainer" class="flex justify-center items-center gap-2 mt-8">
+						</div>
+					</div>
+				</div>
+
+				<div id="page-parcelas" class="hidden">
+					<div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+						<h2 class="text-2xl font-semibold text-white">Controle de Parcelas Pendentes (Meus Contratos)
+						</h2>
+						<div class="flex flex-wrap items-center gap-4">
+							<input type="text" id="parcelasSearchInput" placeholder="🔎 Pesquisar por cliente..."
+								class="w-full md:w-auto p-2 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200">
+							<div class="flex items-center gap-2">
+								<span class="text-sm text-gray-400">Ordenar por:</span>
+								<div id="parcelasSortButtons" class="flex gap-1"></div>
+							</div>
+						</div>
+					</div>
+					<div id="parcelasListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+				</div>
+
+				<div id="page-servicos" class="hidden">
+					<div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+						<h2 class="text-2xl font-semibold text-white">Controlo de Produção de Serviços (Meus Contratos)
+						</h2>
+						<div class="flex flex-wrap items-center gap-4">
+							<select id="servicosAdvogadoFilter" onchange="window.App.renderServicosPage()"
+								class="filter-select admin-only focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"></select>
+							<div class="flex items-center gap-2">
+								<span class="text-sm text-gray-400">Ordenar por:</span>
+								<div id="servicosSortButtons" class="flex gap-1"></div>
+							</div>
+							<input type="text" id="servicosSearchInput" placeholder="🔎 Pesquisar..."
+								class="w-full md:w-auto p-2 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200">
+						</div>
+					</div>
+					<div id="servicosListContainer" class="space-y-8"></div>
+				</div>
+
+				<div id="page-performance" class="hidden admin-only">
+					<div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-700 pb-4">
+						<h2 class="text-2xl font-semibold text-white">Performance Gerencial</h2>
+						<p class="text-gray-400 -mt-4">Visão geral do desempenho da equipa (dados de todos os contratos
+							não-deletados).</p>
+					</div>
+
+					<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+						<div class="space-y-8">
+							<div class="dark-card shadow-lg p-6 rounded-lg">
+								<h3 class="text-lg font-semibold text-gray-300 mb-4">Contratos Ativos por Advogado</h3>
+								<div class="relative" style="height: 350px; max-width: 500px; margin: auto;">
+									<canvas id="adminChartContratos"></canvas>
+								</div>
+							</div>
+							<div class="dark-card shadow-lg p-6 rounded-lg">
+								<h3 class="text-lg font-semibold text-gray-300 mb-4">Faturação (Recebida) por Advogado
+									(Ano)</h3>
+								<div class="relative" style="height: 350px;">
+									<canvas id="adminChartFaturamento"></canvas>
+								</div>
+							</div>
+						</div>
+						<div class="space-y-8">
+							<div class="dark-card shadow-lg p-6 rounded-lg">
+								<h3 class="text-lg font-semibold text-gray-300 mb-4">Ranking de Faturação (Ano Atual)
+								</h3>
+								<table class="ranking-table" id="adminTableFaturamento">
+									<thead>
+										<tr>
+											<th>Rank</th>
+											<th>Advogado(a)</th>
+											<th>Valor Recebido</th>
+										</tr>
+									</thead>
+									<tbody>
+									</tbody>
+								</table>
+							</div>
+							<div class="dark-card shadow-lg p-6 rounded-lg">
+								<h3 class="text-lg font-semibold text-gray-300 mb-4">Ranking de Contratos (Ativos)</h3>
+								<table class="ranking-table" id="adminTableContratos">
+									<thead>
+										<tr>
+											<th>Rank</th>
+											<th>Advogado(a)</th>
+											<th>Nº de Contratos</th>
+										</tr>
+									</thead>
+									<tbody>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div id="page-relatorios" class="hidden admin-only">
+					<div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-700 pb-4">
+						<h2 class="text-2xl font-semibold text-white">Relatórios Avançados</h2>
+						<div class="flex flex-wrap items-center gap-4">
+							<div>
+								<label for="reportStartDate" class="text-sm text-gray-400">De:</label>
+								<input type="date" id="reportStartDate" class="filter-select ml-2">
+							</div>
+							<div>
+								<label for="reportEndDate" class="text-sm text-gray-400">Até:</label>
+								<input type="date" id="reportEndDate" class="filter-select ml-2">
+							</div>
+
+							<button onclick="window.App.generateAdvancedReport()"
+								class="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all duration-200 transform hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2">
+								<i class="fas fa-sync-alt"></i> Gerar Relatório
+							</button>
+							<button onclick="window.App.exportDefaultersPDF()"
+								class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all duration-200 transform hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2">
+								<i class="fas fa-file-invoice-dollar"></i> PDF Inadimplentes
+							</button>
+							<button id="exportPdfButton" onclick="window.App.exportReportPDF()"
+								class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition-all duration-200 transform hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2"
+								disabled>
+								<i class="fas fa-file-pdf"></i> Exportar PDF
+							</button>
+						</div>
+					</div>
+
+					<div id="advancedReportContainer" class="space-y-8">
+						<div id="report-kpis" class="grid grid-cols-1 md:grid-cols-4 gap-6">
+						</div>
+
+						<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+							<div class="dark-card shadow-lg p-6 rounded-lg">
+								<h3 class="text-lg font-semibold text-gray-300 mb-4">Faturação Real (Linha do Tempo)
+								</h3>
+								<div class="relative" style="height: 350px;">
+									<canvas id="advReportTimelineChart"></canvas>
+								</div>
+							</div>
+							<div class="dark-card shadow-lg p-6 rounded-lg">
+								<h3 class="text-lg font-semibold text-gray-300 mb-4">Novos Contratos (Mensal)</h3>
+								<div class="relative" style="height: 350px;">
+									<canvas id="advReportNewContractsChart"></canvas>
+								</div>
+							</div>
+						</div>
+						<div class="grid grid-cols-1 gap-8">
+							<div class="dark-card shadow-lg p-6 rounded-lg">
+								<h3 class="text-lg font-semibold text-gray-300 mb-4">Faturação por Advogado</h3>
+								<div class="relative" style="height: 400px; max-width: 600px; margin: auto;">
+									<canvas id="advReportByAdvogadoChart"></canvas>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div id="advancedReportEmpty" class="hidden text-center py-10">
+						<div class="inline-block dark-card shadow-lg text-gray-400 p-6 rounded-lg">
+							<i class="fas fa-chart-pie fa-3x mb-3"></i>
+							<p class="font-bold text-xl">Nenhum dado encontrado.</p>
+							<p class="text-sm">Ajuste as datas ou aguarde novos registos.</p>
+						</div>
+					</div>
+				</div>
+
+				<div id="page-lixeira" class="hidden">
+					<div class="flex justify-between items-center mb-4">
+						<h2 class="text-2xl font-semibold text-white">Lixeira de Contratos</h2>
+					</div>
+					<p class="text-gray-400 mb-6">Contratos excluídos são mantidos aqui. Pode restaurá-los ou excluí-los
+						permanentemente (apenas admins).</p>
+					<div id="lixeiraListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+				</div>
+
+				<div id="page-oficina" class="hidden admin-only">
+					<div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-700 pb-4">
+						<h2 class="text-2xl font-semibold text-white">Oficina de Configurações</h2>
+						<p class="text-gray-400 -mt-4">Área para gerir as configurações centrais do sistema.</p>
+					</div>
+
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+						<div class="dark-card shadow-lg p-6 rounded-lg">
+							<h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+								<i class="fas fa-users-cog text-indigo-400"></i>
+								Gerenciador de Advogados
+							</h3>
+							<p class="text-sm text-gray-400 mb-4">
+								Os nomes adicionados aqui aparecerão automaticamente nos formulários e filtros de
+								"Advogado Responsável" em todo o sistema.
+							</p>
+
+							<form id="formAddAdvogado" class="flex gap-2 mb-4">
+								<input type="text" id="inputAdvogadoName" placeholder="Nome do(a) novo(a) Advogado(a)"
+									class="form-input flex-1" required>
+								<button type="submit" class="form-button flex-shrink-0">
+									<i class="fas fa-plus"></i> Adicionar
+								</button>
+							</form>
+
+							<div class="space-y-2 max-h-80 overflow-y-auto" id="advogadoSettingsList">
+							</div>
+						</div>
+
+						<div class... </div>
+						</div>
+					</div>
+
+				</div>
+		</main>
+		<nav id="mobile-nav"
+			class="md:hidden fixed bottom-0 left-0 right-0 bg-gray-900/80 backdrop-blur-lg border-t border-gray-700/50 flex justify-around z-30">
+			<a onclick="window.App.showPage('page-dashboard')" id="mobile-tab-dashboard" class="mobile-nav-item active">
+				<i class="fas fa-tachometer-alt text-xl"></i>
+				<span class="text-xs mt-1">Painel</span>
+			</a>
+
+			<a onclick="window.App.showPage('page-parcelas')" id="mobile-tab-parcelas" class="mobile-nav-item">
+				<i class="fas fa-file-invoice-dollar text-xl"></i>
+				<span class="text-xs mt-1">Parcelas</span>
+			</a>
+
+			<a onclick="window.App.showPage('page-servicos')" id="mobile-tab-servicos" class="mobile-nav-item">
+				<i class="fas fa-tasks text-xl"></i>
+				<span class="text-xs mt-1">Serviços</span>
+			</a>
+
+			<a onclick="window.App.showPage('page-performance')" id="mobile-tab-performance"
+				class="mobile-nav-item admin-only">
+				<i class="fas fa-rocket text-xl"></i>
+				<span class="text-xs mt-1">Perf.</span>
+			</a>
+
+			<a onclick="window.App.showPage('page-relatorios')" id="mobile-tab-relatorios"
+				class="mobile-nav-item admin-only">
+				<i class="fas fa-chart-pie text-xl"></i>
+				<span class="text-xs mt-1">Relat.</span>
+			</a>
+			<a onclick="window.App.showPage('page-lixeira')" id="mobile-tab-lixeira" class="mobile-nav-item">
+				<i class="fas fa-trash-alt text-xl"></i>
+				<span class="text-xs mt-1">Lixeira</span>
+			</a>
+
+			<a onclick="window.App.showPage('page-oficina')" id="mobile-tab-oficina" class="mobile-nav-item admin-only">
+				<i class="fas fa-cogs text-xl"></i>
+				<span class="text-xs mt-1">Oficina</span>
+			</a>
+		</nav>
+	</div>
+	<div id="modalDisplayName" class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-1/3 overflow-hidden"
+		role="dialog" aria-modal="true" aria-labelledby="modalDisplayNameTitle">
+		<div class="p-5 bg-gray-900/50 border-b border-gray-700">
+			<h2 id="modalDisplayNameTitle" class="text-2xl font-bold text-white">Bem-vindo(a)!</h2>
+		</div>
+
+		<div class="p-6 modal-body">
+			<p class="text-gray-400 mb-4">Percebemos que é o seu primeiro acesso. Como gostaria de ser chamado(a)?</p>
+			<form id="formDisplayName">
+				<div class="mb-4">
+					<label for="inputDisplayName" class="block text-sm font-medium text-gray-400 mb-2">O seu Nome de
+						Exibição</label>
+					<input type="text" id="inputDisplayName"
+						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200"
+						required>
+				</div>
+				<button type="submit"
+					class="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">Guardar
+					e Entrar</button>
+			</form>
+		</div>
+	</div>
+
+	<div id="modalContrato"
+		class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-1/2 lg:w-2/5 overflow-hidden flex flex-col"
+		role="dialog" aria-modal="true" aria-labelledby="modalContratoTitle">
+		<div class="flex-shrink-0 flex justify-between items-center p-5 bg-gray-900/50 border-b border-gray-700">
+			<h2 id="modalContratoTitle" class="text-2xl font-bold text-white">Registar Novo Contrato</h2>
+			<button onclick="window.App.closeModal('modalContrato')"
+				class="text-gray-400 hover:text-white text-2xl transition-colors duration-150"
+				aria-label="Fechar modal">&times;</button>
+		</div>
+
+		<form id="formContrato" class="flex flex-col flex-1 overflow-hidden">
+			<div class="p-6 space-y-4 overflow-y-auto modal-body">
+				<input type="hidden" id="contractId">
+				<input type="hidden" id="financialDataChanged" value="false">
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label for="clienteNome" class="block text-sm font-medium text-gray-400 mb-1">Nome do
+							Cliente</label>
+						<input type="text" id="clienteNome"
+							class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200"
+							required>
+					</div>
+					<div>
+						<label for="clienteContato" class="block text-sm font-medium text-gray-400 mb-1">WhatsApp /
+							Contato</label>
+						<input type="text" id="clienteContato" placeholder="+55 11 99999-9999"
+							class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200">
+					</div>
+					<div class="md:col-span-2">
+						<label for="advogadoResponsavel" class="block text-sm font-medium text-gray-400 mb-1">Advogado
+							Responsável</label>
+						<select id="advogadoResponsavel"
+							class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200"
+							required></select>
+					</div>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-400 mb-1">Adicionar Serviços</label>
+					<div id="servicosContainerWrapper"
+						class="mt-1 p-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm">
+						<div id="servicosContainer" class="flex flex-wrap items-center gap-1 w-full mb-2">
+						</div>
+						<div class="flex gap-2">
+							<input type="text" id="contratoServicoInput"
+								class="flex-grow outline-none bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white"
+								placeholder="Nome do Serviço...">
+							<input type="date" id="contratoPrazoInput"
+								class="bg-gray-700 border border-gray-600 rounded-md shadow-sm text-gray-400 px-3 py-2"
+								style="color-scheme: dark;">
+							<button type="button" id="addServiceButton"
+								class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-3 rounded-lg">Adicionar</button>
+						</div>
+					</div>
+				</div>
+				<div>
+					<label for="contratoTipoPagamento" class="block text-sm font-medium text-gray-400 mb-1">Modalidade
+						de Pagamento</label>
+					<select id="contratoTipoPagamento"
+						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200">
+						<option>Parcelado</option>
+						<option>Pró-labore</option>
+						<option>Entrada única</option>
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-400 mb-1">Arquivos do Contrato</label>
+					<div id="contractFilesDropZone"
+						class="border-2 border-dashed border-gray-600 rounded-lg p-4 text-center cursor-pointer hover:border-indigo-500 hover:bg-gray-800 transition-colors">
+						<i class="fas fa-cloud-upload-alt text-2xl text-gray-400 mb-2"></i>
+						<p class="text-sm text-gray-400">Arraste arquivos aqui ou clique para selecionar</p>
+						<input type="file" id="contractFileInput" class="hidden" accept="image/*,application/pdf">
+					</div>
+					<div id="contractFilesList" class="mt-2 space-y-2"></div>
+				</div>
+				<div>
+					<label for="contratoObservacoes"
+						class="block text-sm font-medium text-gray-400 mb-1">Observações</label>
+					<textarea id="contratoObservacoes" rows="3"
+						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200"
+						placeholder="Detalhes da negociação, informações do caso, etc..."></textarea>
+				</div>
+
+				<div class="admin-only space-y-4">
+					<div id="financial-warning"
+						class="hidden p-3 bg-yellow-900/30 border border-yellow-700 rounded-lg text-yellow-300 text-sm">
+						<i class="fas fa-exclamation-triangle mr-2"></i> Os campos financeiros estão bloqueados pois
+						este contrato já possui parcelas pagas. Para alterá-los, é necessário um novo contrato.
+					</div>
+
+					<div id="paid-parcels-container" class="hidden mt-4 pt-4 border-t border-gray-700">
+						<h3 class="text-lg font-semibold text-white mb-3">Parcelas Pagas (Gerir Anexos)</h3>
+						<div id="paid-parcels-list" class="space-y-3"></div>
+					</div>
+
+					<h3 class="text-lg font-semibold mb-2 border-t border-gray-700 pt-4 text-white">Detalhes Financeiros
+					</h3>
+
+					<div class="p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+						<label for="contratoEspecial" class="flex items-center">
+							<input type="checkbox" id="contratoEspecial"
+								class="h-4 w-4 bg-gray-700 border-gray-600 rounded text-indigo-600 focus:ring-indigo-500">
+							<span class="ml-2 text-sm font-medium text-gray-300">Contrato Especial (Inserir parcelas
+								manualmente)</span>
+						</label>
+						<p class="text-xs text-gray-500 ml-6 mt-1">Use para parcelas com valores e vencimentos
+							diferentes.</p>
+					</div>
+
+					<div id="financial-fields-standard" class="space-y-4">
+						<div class="p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+							<label for="contratoJaQuitado" class="flex items-center">
+								<input type="checkbox" id="contratoJaQuitado"
+									class="h-4 w-4 bg-gray-700 border-gray-600 rounded text-indigo-600 focus:ring-indigo-500">
+								<span class="ml-2 text-sm font-medium text-gray-300">Marcar valor fixo como já quitado
+									(contrato antigo)</span>
+							</label>
+							<p class="text-xs text-gray-500 ml-6 mt-1">Isto criará 1 parcela única já "Paga" com o Valor
+								Total. Deixe o N° de Parcelas como 1.</p>
+						</div>
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<div>
+								<label for="valorTotal" class="block text-sm font-medium text-gray-400 mb-1">Valor Fixo
+									Total (R$)</label>
+								<input type="number" step="0.01" id="valorTotal" placeholder="0 se for só êxito"
+									class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm text-white transition-all duration-200">
+							</div>
+							<div>
+								<label for="numParcelas" class="block text-sm font-medium text-gray-400 mb-1">N° de
+									Parcelas</label>
+								<input type="number" id="numParcelas" placeholder="1 para 'À Vista'"
+									class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm text-white transition-all duration-200"
+									value="1">
+							</div>
+						</div>
+						<div>
+							<label for="vencimentoPrimeiraParcela"
+								class="block text-sm font-medium text-gray-400 mb-1">Vencimento da 1ª Parcela</label>
+							<input type="date" id="vencimentoPrimeiraParcela"
+								class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm text-white transition-all duration-200"
+								style="color-scheme: dark;">
+						</div>
+					</div>
+
+					<div id="financial-fields-special" class="hidden space-y-4">
+						<p class="text-sm text-gray-400">Insira as parcelas uma a uma.</p>
+						<div class="flex flex-col md:flex-row gap-2">
+							<div class="flex-1">
+								<label for="parcelaValorManual"
+									class="block text-xs font-medium text-gray-400 mb-1">Valor da Parcela (R$)</label>
+								<input type="number" step="0.01" id="parcelaValorManual" placeholder="1500.00"
+									class="form-input">
+							</div>
+							<div class="flex-1">
+								<label for="parcelaVencimentoManual"
+									class="block text-xs font-medium text-gray-400 mb-1">Vencimento</label>
+								<input type="date" id="parcelaVencimentoManual" class="form-input"
+									style="color-scheme: dark;">
+							</div>
+							<button type="button" id="addManualParcelButton"
+								class="form-button self-end mt-4 md:mt-0">Adicionar</button>
+						</div>
+						<div id="manualParcelList"
+							class="space-y-1 max-h-40 overflow-y-auto p-2 bg-gray-900/50 rounded-md border border-gray-700">
+						</div>
+					</div>
+
+					<div>
+						<label for="taxaExito" class="block text-sm font-medium text-gray-400 mb-1">Taxa de Êxito
+							(Bonificação)</label>
+						<input type="text" id="taxaExito" placeholder="Ex: 20%, 10000, 5 SALARIOS"
+							class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm text-white transition-all duration-200">
+					</div>
+				</div>
+			</div>
+
+			<div class="flex-shrink-0 flex justify-end p-4 bg-gray-900/50 border-t border-gray-700">
+				<button type="button" onclick="window.App.closeModal('modalContrato')"
+					class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg mr-2 transition-all duration-200">Cancelar</button>
+				<button type="submit"
+					class="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">Guardar</button>
+			</div>
+		</form>
+	</div>
+	<div id="modalPagamento" class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-1/3 overflow-hidden"
+		role="dialog" aria-modal="true" aria-labelledby="modalPagamentoTitle">
+		<div class="flex justify-between items-center p-5 bg-gray-900/50 border-b border-gray-700">
+			<h2 id="modalPagamentoTitle" class="text-2xl font-bold text-white">Registar Pagamento</h2>
+			<button onclick="window.App.closeModal('modalPagamento')"
+				class="text-gray-400 hover:text-white text-2xl transition-colors duration-150"
+				aria-label="Fechar modal">&times;</button>
+		</div>
+
+		<form id="formPagamento">
+			<div class="p-6 space-y-4 modal-body">
+				<div id="pagamentoInfo" class="mb-4 bg-gray-700 p-3 rounded-md text-white"></div>
+				<div>
+					<label for="pagamentoValor" class="block text-sm font-medium text-gray-400 mb-1">Valor Pago
+						(R$)</label>
+					<input type="number" step="0.01" id="pagamentoValor"
+						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200"
+						required>
+				</div>
+				<div>
+					<label for="pagamentoData" class="block text-sm font-medium text-gray-400 mb-1">Data do
+						Pagamento</label>
+					<input type="date" id="pagamentoData"
+						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200"
+						required style="color-scheme: dark;">
+				</div>
+				<div>
+					<label for="pagamentoAnexo" class="block text-sm font-medium text-gray-400 mb-1">Comprovativo
+						(Opcional)</label>
+					<input type="file" id="pagamentoAnexo" accept="image/*,application/pdf"
+						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200"
+						style="color-scheme: dark;">
+					<p class="text-xs text-gray-500 mt-1">Máx: 300KB (PDF ou Imagem)</p>
+				</div>
+				<input type="hidden" id="pagamentoContractId">
+				<input type="hidden" id="pagamentoParcelIndex">
+			</div>
+
+			<div class="flex justify-end p-4 bg-gray-900/50 border-t border-gray-700">
+				<button type="button" onclick="window.App.closeModal('modalPagamento')"
+					class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg mr-2 transition-all duration-200">Cancelar</button>
+				<button type="submit"
+					class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">Confirmar
+					Pagamento</button>
+			</div>
+		</form>
+	</div>
+
+	<div id="modalCliente"
+		class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-3/4 lg:w-2/3 overflow-hidden flex flex-col"
+		role="dialog" aria-modal="true" aria-labelledby="clienteModalTitle">
+		<div class="flex-shrink-0 flex justify-between items-center p-5 bg-gray-900/50 border-b border-gray-700">
+			<h2 id="clienteModalTitle" class="text-2xl font-bold text-white"></h2>
+			<button onclick="window.App.closeModal('modalCliente')"
+				class="text-gray-400 hover:text-white text-2xl transition-colors duration-150"
+				aria-label="Fechar modal">&times;</button>
+		</div>
+		<div id="clienteModalContent" class="p-6 space-y-6 overflow-y-auto modal-body"></div>
+	</div>
+	<div id="modalRelatorio"
+		class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-3/4 lg:w-2/3 admin-only overflow-hidden flex flex-col"
+		role="dialog" aria-modal="true" aria-labelledby="modalRelatorioTitle">
+		<div class="flex-shrink-0 flex justify-between items-center p-5 bg-gray-900/50 border-b border-gray-700">
+			<h2 id="modalRelatorioTitle" class="text-2xl font-bold text-white">Relatório Mensal</h2>
+			<button onclick="window.App.closeModal('modalRelatorio')"
+				class="text-gray-400 hover:text-white text-2xl transition-colors duration-150"
+				aria-label="Fechar modal">&times;</button>
+		</div>
+
+		<div class="p-6 overflow-y-auto modal-body">
+			<div class="flex gap-4 mb-4">
+				<div class="flex-1">
+					<label for="reportMonth" class="block text-sm font-medium text-gray-400 mb-1">Mês</label>
+					<select id="reportMonth"
+						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200"></select>
+				</div>
+				<div class="flex-1">
+					<label for="reportYear" class="block text-sm font-medium text-gray-400 mb-1">Ano</label>
+					<select id="reportYear"
+						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200"></select>
+				</div>
+			</div>
+			<div class="flex gap-4 mb-6">
+				<button onclick="window.App.generateAndShowReport()"
+					class="flex-1 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+					<i class="fas fa-file-invoice-dollar mr-2"></i> Relatório
+				</button>
+				<button onclick="window.App.showAnalyticsInModal()"
+					class="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+					<i class="fas fa-chart-bar mr-2"></i> Gráficos
+				</button>
+				<button onclick="window.App.exportReportCSV()"
+					class="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">
+					<i class="fas fa-file-csv mr-2"></i> Exportar (CSV)
+				</button>
+			</div>
+
+			<div id="reportResult" class="space-y-4">
+			</div>
+
+			<div id="reportChartsContainer" class="hidden space-y-8">
+				<div class="dark-card shadow-lg p-6 rounded-lg">
+					<h3 class="text-lg font-semibold text-gray-300 mb-4">Faturação Real (Últimos 12 Meses)</h3>
+					<div class="relative" style="height: 350px;">
+						<canvas id="actualIncomeChartModal"></canvas>
+					</div>
+				</div>
+				<div class="dark-card shadow-lg p-6 rounded-lg">
+					<h3 class="text-lg font-semibold text-gray-300 mb-4">Projeção de Ganhos (Próximos 12 Meses)</h3>
+					<p class="text-sm text-gray-400 mb-4 -mt-3">(Baseado em parcelas pendentes)</p>
+					<div class="relative" style="height: 350px;">
+						<canvas id="projectedIncomeChartModal"></canvas>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="modalExito" class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-1/3 overflow-hidden" role="dialog"
+		aria-modal="true" aria-labelledby="modalExitoTitle">
+		<div class="flex-shrink-0 flex justify-between items-center p-5 bg-gray-900/50 border-b border-gray-700">
+			<h2 id="modalExitoTitle" class="text-2xl font-bold text-white">Registar Recebimento de Êxito</h2>
+			<button onclick="window.App.closeModal('modalExito')"
+				class="text-gray-400 hover:text-white text-2xl transition-colors duration-150"
+				aria-label="Fechar modal">&times;</button>
+		</div>
+
+		<form id="formExito">
+			<div class="p-6 space-y-4 modal-body">
+				<div id="exitoInfo" class="mb-4 bg-gray-700 p-3 rounded-md"></div>
+				<div class="admin-only">
+					<label for="exitoValorRecebido" class="block text-sm font-medium text-gray-400 mb-1">Valor Líquido
+						Recebido (R$)</label>
+					<input type="number" step="0.01" id="exitoValorRecebido"
+						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm text-white transition-all duration-200"
+						placeholder="Ex: 9500.00" required>
+				</div>
+				<p class="mb-4 text-gray-400 non-admin-hidden">Confirme o recebimento do valor de êxito.</p>
+				<input type="hidden" id="exitoContractId">
+			</div>
+
+			<div class="flex-shrink-0 flex justify-end p-4 bg-gray-900/50 border-t border-gray-700">
+				<button type="button" onclick="window.App.closeModal('modalExito')"
+					class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg mr-2 transition-all duration-200">Cancelar</button>
+				<button type="submit"
+					class="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5">Guardar
+					Recebimento</button>
+			</div>
+		</form>
+	</div>
+
+	<div id="modal-backdrop" class="modal-backdrop"></div>
+
+	<script type="module" src="js/app.js"></script>
+
+	<script src="js/ai_agent.js"></script>
+</body>
+
+</html>
