@@ -533,7 +533,11 @@ class App {
 				} else if (this.currentParcelasSort === 'value-desc') { // [INÍCIO DA ALTERAÇÃO] Removido 'isUserAdmin'
 					parcelasList.sort((a, b) => b.valorCorrigido - a.valorCorrigido); // Mais caras primeiro
 				} else if (this.currentParcelasSort === 'name-asc') {
-					parcelasList.sort((a, b) => a.contract.clientName.localeCompare(b.contract.clientName));
+					parcelasList.sort((a, b) => {
+						const nameCmp = a.contract.clientName.localeCompare(b.contract.clientName);
+						if (nameCmp !== 0) return nameCmp;
+						return a.diffDays - b.diffDays;
+					});
 				}
 
 				container.innerHTML = '';
@@ -992,6 +996,8 @@ class App {
 				const contractData = {
 					clientName: Utils.sanitizeText(document.getElementById('clienteNome').value),
 					clientContact: Utils.sanitizeText(document.getElementById('clienteContato').value),
+					clientEmail: Utils.sanitizeText(document.getElementById('clienteEmail').value),
+					clientBankDetails: Utils.sanitizeText(document.getElementById('clienteDadosBancarios').value),
 					advogadoResponsavel: Utils.sanitizeText(document.getElementById('advogadoResponsavel').value),
 					serviceTypes,
 					paymentType: Utils.sanitizeText(document.getElementById('contratoTipoPagamento').value),
@@ -1173,14 +1179,32 @@ class App {
 							const base64Data = await Utils.fileToBase64(anexoFile);
 							if (!parcel.attachments) parcel.attachments = [];
 							parcel.attachments.push({
-								name: anexoFile.name,
+								name: 'Comprovativo: ' + anexoFile.name,
 								type: anexoFile.type,
 								data: base64Data,
 								uploadedAt: new Date().toISOString(),
 								uploadedBy: this.currentUserDisplayName
 							});
 						} else {
-							Utils.showToast('Anexo ignorado: muito grande (>300KB).', 'error');
+							Utils.showToast('Comprovativo ignorado: muito grande (>300KB).', 'error');
+						}
+					}
+
+					// Processar NF se existir
+					const nfFile = document.getElementById('pagamentoNotaFiscal').files[0];
+					if (nfFile) {
+						if (Utils.validateFileSize(nfFile, 0.3)) {
+							const base64Data = await Utils.fileToBase64(nfFile);
+							if (!parcel.attachments) parcel.attachments = [];
+							parcel.attachments.push({
+								name: 'NF: ' + nfFile.name,
+								type: nfFile.type,
+								data: base64Data,
+								uploadedAt: new Date().toISOString(),
+								uploadedBy: this.currentUserDisplayName
+							});
+						} else {
+							Utils.showToast('NF ignorada: muito grande (>300KB).', 'error');
 						}
 					}
 
@@ -1707,6 +1731,8 @@ class App {
 						document.getElementById('contractId').value = contract.id;
 						document.getElementById('clienteNome').value = contract.clientName;
 						document.getElementById('clienteContato').value = contract.clientContact || '';
+						document.getElementById('clienteEmail').value = contract.clientEmail || '';
+						document.getElementById('clienteDadosBancarios').value = contract.clientBankDetails || '';
 						advogadoSelect.value = contract.advogadoResponsavel;
 						(contract.serviceTypes || []).forEach(service => this.createServiceTag(service.name, service.deadline, service.status));
 						document.getElementById('contratoTipoPagamento').value = contract.paymentType || 'Parcelado';
@@ -1883,6 +1909,7 @@ class App {
 
 				// [NOVO] Limpa o campo de anexo e Configura Drag&Drop
 				const anexoInput = document.getElementById('pagamentoAnexo');
+				const nfInput = document.getElementById('pagamentoNotaFiscal');
 				if (anexoInput) {
 					anexoInput.value = '';
 
@@ -1896,6 +1923,20 @@ class App {
 						dt.items.add(file);
 						anexoInput.files = dt.files;
 						Utils.showToast(`Arquivo "${file.name}" selecionado!`, 'info');
+					});
+				}
+				if (nfInput) {
+					nfInput.value = '';
+
+					// Adiciona classes para efeito visual de "Drop Zone"
+					const dropContainerNf = nfInput.parentElement;
+					dropContainerNf.classList.add('border', 'border-transparent', 'rounded-md', 'transition-colors', 'duration-200');
+
+					Utils.setupDragAndDrop(dropContainerNf, (file) => {
+						const dt = new DataTransfer();
+						dt.items.add(file);
+						nfInput.files = dt.files;
+						Utils.showToast(`NF "${file.name}" selecionada!`, 'info');
 					});
 				}
 

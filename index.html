@@ -576,24 +576,31 @@
 
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<label for="clienteNome" class="block text-sm font-medium text-gray-400 mb-1">Nome do
-							Cliente</label>
+						<label for="clienteNome" class="block text-sm font-medium text-gray-400 mb-1">Nome do Cliente</label>
 						<input type="text" id="clienteNome"
 							class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200"
 							required>
 					</div>
 					<div>
-						<label for="clienteContato" class="block text-sm font-medium text-gray-400 mb-1">WhatsApp /
-							Contato</label>
+						<label for="clienteContato" class="block text-sm font-medium text-gray-400 mb-1">WhatsApp / Contato</label>
 						<input type="text" id="clienteContato" placeholder="+55 11 99999-9999"
 							class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200">
 					</div>
-					<div class="md:col-span-2">
-						<label for="advogadoResponsavel" class="block text-sm font-medium text-gray-400 mb-1">Advogado
-							Responsável</label>
+					<div>
+						<label for="clienteEmail" class="block text-sm font-medium text-gray-400 mb-1">E-mail</label>
+						<input type="email" id="clienteEmail" placeholder="cliente@email.com"
+							class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200">
+					</div>
+					<div>
+						<label for="advogadoResponsavel" class="block text-sm font-medium text-gray-400 mb-1">Advogado Responsável</label>
 						<select id="advogadoResponsavel"
 							class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200"
 							required></select>
+					</div>
+					<div class="md:col-span-2">
+						<label for="clienteDadosBancarios" class="block text-sm font-medium text-gray-400 mb-1">Dados Bancários / PIX</label>
+						<input type="text" id="clienteDadosBancarios" placeholder="Banco, Agência, Conta ou Chave PIX"
+							class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-white transition-all duration-200">
 					</div>
 				</div>
 				<div>
@@ -770,12 +777,20 @@
 						required style="color-scheme: dark;">
 				</div>
 				<div>
-					<label for="pagamentoAnexo" class="block text-sm font-medium text-gray-400 mb-1">Comprovativo
+					<label for="pagamentoAnexo" class="block text-sm font-medium text-gray-400 mb-1">Comprovativo de Pagamento
 						(Opcional)</label>
 					<input type="file" id="pagamentoAnexo" accept="image/*,application/pdf"
 						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200"
 						style="color-scheme: dark;">
 					<p class="text-xs text-gray-500 mt-1">Máx: 300KB (PDF ou Imagem)</p>
+				</div>
+				<div>
+					<label for="pagamentoNotaFiscal" class="block text-sm font-medium text-gray-400 mb-1">Nota Fiscal Emitida
+						(Opcional)</label>
+					<input type="file" id="pagamentoNotaFiscal" accept="image/*,application/pdf"
+						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200"
+						style="color-scheme: dark;">
+					<p class="text-xs text-gray-500 mt-1">Anexe a NF referente a esta parcela</p>
 				</div>
 				<input type="hidden" id="pagamentoContractId">
 				<input type="hidden" id="pagamentoParcelIndex">
