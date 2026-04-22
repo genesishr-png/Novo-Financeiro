@@ -43,8 +43,7 @@ class App {
 				this.currentServicosSort = 'name-asc';
 				this.contractListPage = 0;
 				this.contractStatusFilter = 'ativos';
-				this.contractDateFilter = 'todos';
-				this.showLegacyDebt = false; // Controla o botão do KPI// [NOVO] Filtro de data
+
 				// [MUDANÇA v5] Referências DOM movidas para _initDOMReferences
 				this.backdrop = null;
 				this.appContainer = null;
@@ -198,31 +197,7 @@ class App {
 				// [MUDANÇA v5] Listener do PDF
 				const pdfBtn = document.getElementById('exportPdfButton');
 				if (pdfBtn) {
-					// [NOVO] Listener do Filtro de Data
-					const filterBtn = document.getElementById('date-filter-toggle');
-					if (filterBtn) {
-						filterBtn.addEventListener('click', () => {
-							const label = document.getElementById('date-filter-label');
-							// Ciclo: Todos -> Novos -> Legados -> Todos
-							if (this.contractDateFilter === 'todos') {
-								this.contractDateFilter = 'novos';
-								label.textContent = 'NOVOS';
-								label.className = 'text-xs font-bold ml-1 bg-green-600 px-1 rounded';
-								Utils.showToast('A mostrar: NOVOS (pós 01/11/25)', 'success');
-							} else if (this.contractDateFilter === 'novos') {
-								this.contractDateFilter = 'legados';
-								label.textContent = 'LEGADOS';
-								label.className = 'text-xs font-bold ml-1 bg-yellow-600 px-1 rounded';
-								Utils.showToast('A mostrar: LEGADOS (pré 01/11/25)', 'info');
-							} else {
-								this.contractDateFilter = 'todos';
-								label.textContent = 'TODOS';
-								label.className = 'text-xs font-bold ml-1 bg-indigo-600 px-1 rounded';
-								Utils.showToast('A mostrar: TODOS', 'info');
-							}
-							this.render(); // Atualiza a tela
-						});
-					}
+
 					pdfBtn.addEventListener('click', () => this.exportReportPDF());
 				}
 
@@ -233,18 +208,7 @@ class App {
 						document.getElementById('financialDataChanged').value = 'true';
 					});
 				});
-				// [NOVO] Clique do botão do KPI de Vencidos
-				const toggleDebtBtn = document.getElementById('toggle-debt-view');
-				if (toggleDebtBtn) {
-					toggleDebtBtn.addEventListener('click', (e) => {
-						e.stopPropagation(); // Evita cliques indesejados
-						this.showLegacyDebt = !this.showLegacyDebt; // Liga/Desliga
-						this.render(); // Atualiza a tela
 
-						const msg = this.showLegacyDebt ? "A mostrar DÍVIDA TOTAL (Histórico)." : "A mostrar DÍVIDA DO PERÍODO (Novos).";
-						Utils.showToast(msg, 'info');
-					});
-				}
 			}
 
 			// --- 2. HANDLERS DE AUTENTICAÇÃO E DADOS ---
@@ -403,8 +367,7 @@ class App {
 				const primeiroDiaMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 				const trintaDiasFrente = new Date(); trintaDiasFrente.setDate(hoje.getDate() + 30);
 
-				// DATA DE CORTE: Define o que é "Dívida Velha" (antes de Nov/25)
-				const DATA_CORTE_NOVOS = new Date('2025-11-01T00:00:00');
+
 
 				let totalAVencer30dias = 0;
 				let totalVencido = 0;
@@ -425,14 +388,7 @@ class App {
 							}
 						} else {
 							if (vencimento < hoje) {
-								// [AQUI ESTÁ O SEGREDO DO BOTÃO]
-								// Se estamos na aba 'NOVOS' 
-								// E o botão de ver histórico está DESLIGADO (!this.showLegacyDebt)
-								// E a parcela venceu antes de Novembro/25
-								// ENTÃO: Pula essa parcela (não mostra, não soma).
-								if (this.contractDateFilter === 'novos' && !this.showLegacyDebt && vencimento < DATA_CORTE_NOVOS) {
-									continue;
-								}
+
 
 								const valorCorrigido = this.correctionCalculator.calcularValorCorrigido(parcel.value, parcel.dueDate);
 								totalVencido += valorCorrigido;
@@ -471,29 +427,7 @@ class App {
 
 				this.renderDashboard(totalAVencer30dias, totalVencido, totalPagoMes, contractsToRender.length);
 
-				// [CONTROLE VISUAL DO BOTÃO]
-				const toggleBtn = document.getElementById('toggle-debt-view');
-				const toggleIcon = document.getElementById('toggle-debt-icon');
 
-				if (toggleBtn) {
-					// Só mostra o botão se estivermos na aba "NOVOS"
-					if (this.contractDateFilter === 'novos') {
-						toggleBtn.classList.remove('hidden');
-
-						// Muda o ícone: Olho (Aberto = Tudo) / Filtro (Fechado = Só Novos)
-						if (this.showLegacyDebt) {
-							toggleIcon.className = 'fas fa-eye text-red-400'; // Modo Histórico
-							toggleBtn.title = "A mostrar TUDO (Clique para filtrar)";
-						} else {
-							toggleIcon.className = 'fas fa-filter text-gray-500'; // Modo Filtrado
-							toggleBtn.title = "A mostrar Período (Clique para ver histórico)";
-						}
-					} else {
-						// Esconde o botão se estiver em "Todos" ou "Legados"
-						toggleBtn.classList.add('hidden');
-						this.showLegacyDebt = false;
-					}
-				}
 			}
 			renderDashboard(aVencer, vencido, pago, totalContratos) {
 				document.getElementById('dash-a-receber').textContent = Utils.formatCurrency(aVencer);
@@ -889,8 +823,7 @@ class App {
 
 			getFilteredContracts(includeDeleted = false) {
 				const allContracts = this.database.contracts;
-				// Data de corte: 01 de Novembro de 2025 (mês 10 no JS pois começa em 0)
-				const DIVISOR_DATE = new Date(2025, 10, 1);
+
 
 				let filtered = [];
 				// 1. Filtro de Usuário vs Admin
@@ -900,19 +833,7 @@ class App {
 					filtered = allContracts.filter(c => c.advogadoResponsavel === this.currentUserDisplayName && (includeDeleted ? true : !c.isDeleted));
 				}
 
-				// 2. [NOVO] Filtro de Data (Novos vs Legados)
-				if (this.contractDateFilter !== 'todos') {
-					filtered = filtered.filter(c => {
-						// Se não tiver data de criação, assume que é antigo (2020)
-						const dataCriacao = c.createdAt ? new Date(c.createdAt) : new Date('2020-01-01');
-						if (this.contractDateFilter === 'novos') {
-							return dataCriacao >= DIVISOR_DATE;
-						} else if (this.contractDateFilter === 'legados') {
-							return dataCriacao < DIVISOR_DATE;
-						}
-						return true;
-					});
-				}
+
 				return filtered;
 			}
 
