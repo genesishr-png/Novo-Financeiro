@@ -96,6 +96,11 @@ class App {
 				this.notificationList = document.getElementById('notification-list');
 				this.notificationListEmpty = document.getElementById('notification-list-empty');
 				this.clearNotificationsButton = document.getElementById('clear-notifications-button');
+
+				// [FIX] Garante que todos os modais iniciem fechados (evita bug de cache/hydration)
+				document.querySelectorAll('.modal').forEach(m => { m.style.display = 'none'; });
+				if (this.backdrop) this.backdrop.style.display = 'none';
+				document.body.style.overflow = '';
 			}
 
 			setupEventListeners() {
