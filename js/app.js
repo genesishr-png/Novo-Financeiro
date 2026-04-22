@@ -16,6 +16,7 @@ class App {
 				this.database = {
 					contracts: [],
 					notifications: [], // [MUDANÇA v5]
+					officeExpenses: [], // [NOVO]
 					// [INÍCIO DA ALTERAÇÃO - OFICINA]
 					// Inicia com um objeto padrão para advogados.
 					// O listener do systemSettings irá preencher isso.
@@ -32,12 +33,14 @@ class App {
 
 				// [NOVO v5.4] Estado para controlar notificações de vencimento
 				this.lastOverdueCheck = null;
+				this.lastExpensesCheck = null; // [NOVO]
 
 				// [INÍCIO DA ALTERAÇÃO - CONTRATO ESPECIAL]
 				this.manualParcels = []; // Array temporário para guardar parcelas manuais
 				// [FIM DA ALTERAÇÃO]
 
 				// Estado de UI
+				this.viewMode = 'cliente'; // [NOVO] 'cliente' | 'escritorio'
 				this.currentContractSort = 'name-asc';
 				this.currentParcelasSort = 'days-asc'; // [MUDANÇA v5.6] Renomeado e mudou o padrão
 				this.currentServicosSort = 'name-asc';
@@ -116,6 +119,13 @@ class App {
 				document.getElementById('formContrato').addEventListener('submit', this.handleContractSubmit.bind(this));
 				document.getElementById('formPagamento').addEventListener('submit', this.handlePaymentSubmit.bind(this));
 				document.getElementById('formExito').addEventListener('submit', this.handleExitoSubmit.bind(this));
+				const formDespesa = document.getElementById('formDespesa');
+				if (formDespesa) formDespesa.addEventListener('submit', this.handleDespesaSubmit.bind(this)); // [NOVO]
+
+				const viewToggleButton = document.getElementById('view-toggle-button');
+				if (viewToggleButton) {
+					viewToggleButton.addEventListener('click', this.toggleViewMode.bind(this));
+				}
 
 				// [INÍCIO DA ALTERAÇÃO - OFICINA]
 				// Formulário da Oficina
@@ -254,6 +264,9 @@ class App {
 						// [INÍCIO DA ALTERAÇÃO - OFICINA]
 						this.firebaseService.startSystemSettingsListener(); // Inicia o listener de configs
 						// [FIM DA ALTERAÇÃO - OFICINA]
+						if (this.isUserAdmin) {
+							this.firebaseService.startOfficeExpensesListener();
+						}
 					}
 				} else {
 					// Utilizador deslogado
@@ -261,6 +274,7 @@ class App {
 					this.currentSafeName = null;
 					this.isUserAdmin = false;
 					this.lastOverdueCheck = null; // [NOVO v5.4] Reseta o cheque de vencidos
+					this.lastExpensesCheck = null; // [NOVO]
 					document.body.classList.remove('is-admin');
 					this.authOverlay.style.display = 'flex'; // Mostra o novo ecrã de login
 					this.appContainer.style.display = 'none';
@@ -269,7 +283,166 @@ class App {
 					this.firebaseService.stopNotificationListener(); // [MUDANÇA v5]
 					// [INÍCIO DA ALTERAÇÃO - OFICINA]
 					this.firebaseService.stopSystemSettingsListener(); // Para o listener de configs
+					this.firebaseService.stopOfficeExpensesListener(); // [NOVO]
 					// [FIM DA ALTERAÇÃO - OFICINA]
+				}
+			}
+
+			// [NOVO] Lógica do Módulo Financeiro do Escritório
+			toggleViewMode() {
+				this.viewMode = this.viewMode === 'cliente' ? 'escritorio' : 'cliente';
+				const label = document.getElementById('view-toggle-label');
+				
+				if (this.viewMode === 'cliente') {
+					label.textContent = 'CLIENTE';
+					label.className = 'text-xs font-bold bg-indigo-600 px-2 py-0.5 rounded text-white';
+					if (this.currentPageId === 'page-escritorio' || this.currentPageId === 'page-dashboard') {
+						this.showPage('page-dashboard');
+					}
+				} else {
+					label.textContent = 'ESCRITÓRIO';
+					label.className = 'text-xs font-bold bg-red-600 px-2 py-0.5 rounded text-white';
+					if (this.currentPageId === 'page-escritorio' || this.currentPageId === 'page-dashboard') {
+						this.showPage('page-escritorio');
+					}
+				}
+			}
+
+			handleOfficeExpensesUpdate(expenses) {
+				this.database.officeExpenses = expenses;
+				this.checkAndNotifyExpenses(expenses);
+				if (this.currentPageId === 'page-escritorio') {
+					this.renderDespesas();
+				}
+			}
+
+			openDespesaModal(expenseId = null) {
+				const title = document.getElementById('modalDespesaTitle');
+				const form = document.getElementById('formDespesa');
+				form.reset();
+				document.getElementById('despesaId').value = '';
+				document.getElementById('divDespesaPagamento').classList.add('hidden');
+
+				if (expenseId) {
+					const exp = this.database.officeExpenses.find(e => e.id === expenseId);
+					if (exp) {
+						title.textContent = 'Editar Despesa';
+						document.getElementById('despesaId').value = exp.id;
+						document.getElementById('despesaDescricao').value = exp.description;
+						document.getElementById('despesaCategoria').value = exp.category;
+						document.getElementById('despesaVencimento').value = exp.dueDate;
+						document.getElementById('despesaValor').value = exp.value;
+						if (exp.status === 'Paga') {
+							document.getElementById('despesaPaga').checked = true;
+							document.getElementById('divDespesaPagamento').classList.remove('hidden');
+							document.getElementById('despesaDataPagamento').value = exp.paymentDate || '';
+						}
+					}
+				} else {
+					title.textContent = 'Registrar Despesa';
+				}
+
+				document.getElementById('despesaPaga').onchange = (e) => {
+					document.getElementById('divDespesaPagamento').classList.toggle('hidden', !e.target.checked);
+				};
+
+				this.openModal('modalDespesa');
+			}
+
+			async handleDespesaSubmit(e) {
+				e.preventDefault();
+				const btn = e.submitter;
+				const originalText = btn.innerHTML;
+				btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+				btn.disabled = true;
+
+				const id = document.getElementById('despesaId').value;
+				const isPaga = document.getElementById('despesaPaga').checked;
+				const data = {
+					description: Utils.sanitizeText(document.getElementById('despesaDescricao').value),
+					category: document.getElementById('despesaCategoria').value,
+					dueDate: document.getElementById('despesaVencimento').value,
+					value: Utils.parseNumber(document.getElementById('despesaValor').value),
+					status: isPaga ? 'Paga' : 'Pendente',
+					paymentDate: isPaga ? document.getElementById('despesaDataPagamento').value : null,
+					updatedAt: new Date().toISOString()
+				};
+
+				let success = false;
+				if (id) {
+					success = await this.firebaseService.updateOfficeExpense(id, data);
+				} else {
+					data.createdAt = new Date().toISOString();
+					success = await this.firebaseService.addOfficeExpense(data);
+				}
+
+				if (success) this.closeModal('modalDespesa');
+				
+				btn.innerHTML = originalText;
+				btn.disabled = false;
+			}
+
+			renderDespesas() {
+				const filter = document.getElementById('despesasMonthFilter').value; // 'YYYY-MM'
+				let expenses = [...(this.database.officeExpenses || [])];
+				
+				if (filter) {
+					expenses = expenses.filter(e => e.dueDate.startsWith(filter));
+				}
+				
+				expenses.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+				const tbody = document.getElementById('despesasList');
+				const emptyState = document.getElementById('despesasEmptyState');
+				const table = document.getElementById('table-despesas');
+
+				let totalApagar = 0;
+				let totalPago = 0;
+
+				tbody.innerHTML = '';
+				
+				if (expenses.length === 0) {
+					table.classList.add('hidden');
+					emptyState.classList.remove('hidden');
+				} else {
+					table.classList.remove('hidden');
+					emptyState.classList.add('hidden');
+
+					expenses.forEach(exp => {
+						if (exp.status === 'Paga') {
+							totalPago += exp.value;
+						} else {
+							totalApagar += exp.value;
+						}
+
+						const tr = document.createElement('tr');
+						tr.className = "hover:bg-gray-800/50 transition-colors border-b border-gray-700/50";
+						
+						const statusColor = exp.status === 'Paga' ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10';
+						const dateObj = new Date(exp.dueDate + 'T12:00:00Z');
+						
+						tr.innerHTML = `
+							<td class="p-3 text-white">${exp.description}</td>
+							<td class="p-3 text-gray-400 text-sm">${exp.category}</td>
+							<td class="p-3 text-gray-300">${dateObj.toLocaleDateString('pt-BR')}</td>
+							<td class="p-3 font-semibold text-gray-200">${Utils.formatCurrency(exp.value)}</td>
+							<td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${exp.status}</span></td>
+							<td class="p-3 text-right">
+								<button onclick="window.App.openDespesaModal('${exp.id}')" class="text-indigo-400 hover:text-indigo-300 mr-3" title="Editar"><i class="fas fa-edit"></i></button>
+								<button onclick="window.App.deleteDespesa('${exp.id}')" class="text-red-400 hover:text-red-300" title="Excluir"><i class="fas fa-trash"></i></button>
+							</td>
+						`;
+						tbody.appendChild(tr);
+					});
+				}
+
+				document.getElementById('dash-escritorio-apagar').textContent = Utils.formatCurrency(totalApagar);
+				document.getElementById('dash-escritorio-pago').textContent = Utils.formatCurrency(totalPago);
+			}
+
+			async deleteDespesa(id) {
+				if (confirm('Tem certeza que deseja excluir esta despesa?')) {
+					await this.firebaseService.deleteOfficeExpense(id);
 				}
 			}
 
@@ -326,6 +499,8 @@ class App {
 				if (pageId === 'page-dashboard') {
 					this.renderKanban(); // Não é mais async
 					this.renderContractList();
+				} else if (pageId === 'page-escritorio') { // [NOVO]
+					this.renderDespesas();
 				} else if (pageId === 'page-parcelas') { // [MUDANÇA v5.6]
 					this.renderParcelasPage(); // [MUDANÇA v5.6]
 				} else if (pageId === 'page-servicos') {
@@ -741,6 +916,7 @@ class App {
 			showPage(pageId) {
 				const pageTitles = {
 					'page-dashboard': 'Painel Principal',
+					'page-escritorio': 'Gestão Administrativa', // [NOVO]
 					'page-parcelas': 'Controle de Parcelas', // [MUDANÇA v5.6]
 					'page-servicos': 'Produção de Serviços',
 					'page-performance': 'Performance Gerencial',
@@ -1340,6 +1516,37 @@ class App {
 				});
 
 				this.lastOverdueCheck = hojeStr; // Marca como checado hoje
+			}
+
+			// [NOVO] Notifica despesas que vencem hoje ou amanhã
+			checkAndNotifyExpenses(expenses) {
+				if (!this.isUserAdmin) return;
+				const hoje = new Date();
+				const hojeStr = hoje.toISOString().split('T')[0];
+
+				if (this.lastExpensesCheck === hojeStr) return;
+
+				const tomorrow = new Date(hoje);
+				tomorrow.setDate(hoje.getDate() + 1);
+				const amanhaStr = tomorrow.toISOString().split('T')[0];
+
+				expenses.forEach(exp => {
+					if (exp.status === 'Pendente') {
+						if (exp.dueDate === hojeStr) {
+							this.sendNotification(this.currentSafeName, {
+								message: `A despesa "${exp.description}" (${Utils.formatCurrency(exp.value)}) vence HOJE!`,
+								sender: "Sistema Administrativo"
+							});
+						} else if (exp.dueDate === amanhaStr) {
+							this.sendNotification(this.currentSafeName, {
+								message: `A despesa "${exp.description}" (${Utils.formatCurrency(exp.value)}) vence amanhã.`,
+								sender: "Sistema Administrativo"
+							});
+						}
+					}
+				});
+
+				this.lastExpensesCheck = hojeStr;
 			}
 
 			async moveToLixeira(contractId) {

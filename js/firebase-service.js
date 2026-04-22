@@ -40,6 +40,63 @@ export class FirebaseService {
 				}
 			}
 
+			// [NOVO] Módulo Financeiro do Escritório
+			startOfficeExpensesListener() {
+				if (this.expensesListenerUnsubscribe) {
+					this.expensesListenerUnsubscribe();
+				}
+				const expensesCollection = collection(this.db, 'officeExpenses');
+				this.expensesListenerUnsubscribe = onSnapshot(expensesCollection, (snapshot) => {
+					const expenses = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+					this.app.handleOfficeExpensesUpdate(expenses);
+				}, (error) => {
+					console.error("Erro ao buscar officeExpenses:", error);
+				});
+			}
+
+			stopOfficeExpensesListener() {
+				if (this.expensesListenerUnsubscribe) {
+					this.expensesListenerUnsubscribe();
+					this.expensesListenerUnsubscribe = null;
+				}
+			}
+
+			async addOfficeExpense(expenseData) {
+				try {
+					const expensesCollection = collection(this.db, 'officeExpenses');
+					await addDoc(expensesCollection, expenseData);
+					Utils.showToast('Despesa salva com sucesso.', 'success');
+					return true;
+				} catch (error) {
+					console.error("Erro ao adicionar despesa:", error);
+					Utils.showToast('Erro ao salvar a despesa.', 'error');
+					return false;
+				}
+			}
+
+			async updateOfficeExpense(expenseId, expenseData) {
+				try {
+					const expenseRef = doc(this.db, 'officeExpenses', expenseId);
+					await updateDoc(expenseRef, expenseData);
+					Utils.showToast('Despesa atualizada.', 'success');
+					return true;
+				} catch (error) {
+					console.error("Erro ao atualizar despesa:", error);
+					return false;
+				}
+			}
+
+			async deleteOfficeExpense(expenseId) {
+				try {
+					await deleteDoc(doc(this.db, 'officeExpenses', expenseId));
+					Utils.showToast('Despesa excluída.', 'success');
+					return true;
+				} catch (error) {
+					console.error("Erro ao excluir despesa:", error);
+					return false;
+				}
+			}
+
 			// [MUDANÇA v5] Lógica de Notificações
 			startNotificationListener(safeName) {
 				if (this.notificationListenerUnsubscribe) {
