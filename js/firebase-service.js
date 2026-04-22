@@ -97,6 +97,63 @@ export class FirebaseService {
 				}
 			}
 
+			// [NOVO] Módulo de Receitas Avulsas
+			startExtraRevenuesListener() {
+				if (this.revenuesListenerUnsubscribe) {
+					this.revenuesListenerUnsubscribe();
+				}
+				const revenuesCollection = collection(this.db, 'extraRevenues');
+				this.revenuesListenerUnsubscribe = onSnapshot(revenuesCollection, (snapshot) => {
+					const revenues = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+					this.app.handleExtraRevenuesUpdate(revenues);
+				}, (error) => {
+					console.error("Erro ao buscar extraRevenues:", error);
+				});
+			}
+
+			stopExtraRevenuesListener() {
+				if (this.revenuesListenerUnsubscribe) {
+					this.revenuesListenerUnsubscribe();
+					this.revenuesListenerUnsubscribe = null;
+				}
+			}
+
+			async addExtraRevenue(revenueData) {
+				try {
+					const revenuesCollection = collection(this.db, 'extraRevenues');
+					await addDoc(revenuesCollection, revenueData);
+					Utils.showToast('Receita avulsa salva com sucesso.', 'success');
+					return true;
+				} catch (error) {
+					console.error("Erro ao adicionar receita avulsa:", error);
+					Utils.showToast('Erro ao salvar a receita.', 'error');
+					return false;
+				}
+			}
+
+			async updateExtraRevenue(revenueId, revenueData) {
+				try {
+					const revenueRef = doc(this.db, 'extraRevenues', revenueId);
+					await updateDoc(revenueRef, revenueData);
+					Utils.showToast('Receita atualizada.', 'success');
+					return true;
+				} catch (error) {
+					console.error("Erro ao atualizar receita:", error);
+					return false;
+				}
+			}
+
+			async deleteExtraRevenue(revenueId) {
+				try {
+					await deleteDoc(doc(this.db, 'extraRevenues', revenueId));
+					Utils.showToast('Receita excluída.', 'success');
+					return true;
+				} catch (error) {
+					console.error("Erro ao excluir receita:", error);
+					return false;
+				}
+			}
+
 			// [MUDANÇA v5] Lógica de Notificações
 			startNotificationListener(safeName) {
 				if (this.notificationListenerUnsubscribe) {

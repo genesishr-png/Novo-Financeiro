@@ -135,6 +135,27 @@ class App {
 				// Botão de Adicionar Serviço
 				document.getElementById('addServiceButton').addEventListener('click', this.handleAddServiceTag.bind(this));
 
+				// [NOVO] Botão de Adicionar Diligência
+				document.getElementById('addDiligenciaButton')?.addEventListener('click', () => {
+					const descInput = document.getElementById('contratoDiligenciaDesc');
+					const valorInput = document.getElementById('contratoDiligenciaValor');
+					const dataInput = document.getElementById('contratoDiligenciaData');
+
+					const desc = Utils.sanitizeText(descInput.value);
+					const valor = Utils.parseNumber(valorInput.value);
+					const data = dataInput.value;
+
+					if (desc && !isNaN(valor) && valor > 0 && data) {
+						this.createDiligenciaTag(desc, valor, data);
+						descInput.value = '';
+						valorInput.value = '';
+						dataInput.value = '';
+						descInput.focus();
+					} else {
+						Utils.showToast('Preencha a descrição, valor e data da diligência.', 'error');
+					}
+				});
+
 				// [INÍCIO DA ALTERAÇÃO - CONTRATO ESPECIAL]
 				// Listener para a checkbox de Contrato Especial
 				document.getElementById('contratoEspecial').addEventListener('change', this.toggleSpecialContractFields.bind(this));
@@ -443,6 +464,110 @@ class App {
 			async deleteDespesa(id) {
 				if (confirm('Tem certeza que deseja excluir esta despesa?')) {
 					await this.firebaseService.deleteOfficeExpense(id);
+				}
+			}
+
+			// [NOVO] Módulo de Receitas Avulsas
+			handleExtraRevenuesUpdate(revenues) {
+				this.database.extraRevenues = revenues;
+				if (this.currentPageId === 'page-avulsas') {
+					this.renderReceitasAvulsas();
+				}
+			}
+
+			openReceitaAvulsaModal(receitaId = null) {
+				const title = document.getElementById('modalReceitaTitle');
+				const form = document.getElementById('formReceitaAvulsa');
+				form.reset();
+				document.getElementById('receitaId').value = '';
+
+				if (receitaId) {
+					const rec = this.database.extraRevenues.find(e => e.id === receitaId);
+					if (rec) {
+						title.textContent = 'Editar Receita Avulsa';
+						document.getElementById('receitaId').value = rec.id;
+						document.getElementById('receitaDescricao').value = rec.description;
+						document.getElementById('receitaOrigem').value = rec.origin;
+						document.getElementById('receitaData').value = rec.date;
+						document.getElementById('receitaValor').value = rec.value;
+					}
+				} else {
+					title.textContent = 'Registrar Receita Avulsa';
+				}
+				this.openModal('modalReceitaAvulsa');
+			}
+
+			async handleReceitaSubmit(e) {
+				e.preventDefault();
+				const btn = e.submitter;
+				const originalText = btn.innerHTML;
+				btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+				btn.disabled = true;
+
+				const id = document.getElementById('receitaId').value;
+				const data = {
+					description: Utils.sanitizeText(document.getElementById('receitaDescricao').value),
+					origin: Utils.sanitizeText(document.getElementById('receitaOrigem').value),
+					date: document.getElementById('receitaData').value,
+					value: Utils.parseNumber(document.getElementById('receitaValor').value),
+					updatedAt: new Date().toISOString()
+				};
+
+				let success = false;
+				if (id) {
+					success = await this.firebaseService.updateExtraRevenue(id, data);
+				} else {
+					data.createdAt = new Date().toISOString();
+					success = await this.firebaseService.addExtraRevenue(data);
+				}
+
+				if (success) this.closeModal('modalReceitaAvulsa');
+				
+				btn.innerHTML = originalText;
+				btn.disabled = false;
+			}
+
+			renderReceitasAvulsas() {
+				let revenues = [...(this.database.extraRevenues || [])];
+				revenues.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+				const tbody = document.getElementById('receitasAvulsasList');
+				const emptyState = document.getElementById('receitasAvulsasEmptyState');
+				const table = document.getElementById('table-receitas-avulsas');
+
+				tbody.innerHTML = '';
+				
+				if (revenues.length === 0) {
+					table.classList.add('hidden');
+					emptyState.classList.remove('hidden');
+				} else {
+					table.classList.remove('hidden');
+					emptyState.classList.add('hidden');
+
+					revenues.forEach(rec => {
+						const tr = document.createElement('tr');
+						tr.className = "hover:bg-gray-800/50 transition-colors border-b border-gray-700/50";
+						
+						const dateObj = new Date(rec.date + 'T12:00:00Z');
+						
+						tr.innerHTML = `
+							<td class="p-3 text-white">${rec.description}</td>
+							<td class="p-3 text-gray-400">${rec.origin}</td>
+							<td class="p-3 text-gray-300">${dateObj.toLocaleDateString('pt-BR')}</td>
+							<td class="p-3 font-bold text-green-400">+ ${Utils.formatCurrency(rec.value)}</td>
+							<td class="p-3 text-right">
+								<button onclick="window.App.openReceitaAvulsaModal('${rec.id}')" class="text-indigo-400 hover:text-indigo-300 mr-3" title="Editar"><i class="fas fa-edit"></i></button>
+								<button onclick="window.App.deleteReceita('${rec.id}')" class="text-red-400 hover:text-red-300" title="Excluir"><i class="fas fa-trash"></i></button>
+							</td>
+						`;
+						tbody.appendChild(tr);
+					});
+				}
+			}
+
+			async deleteReceita(id) {
+				if (confirm('Tem certeza que deseja excluir esta receita avulsa?')) {
+					await this.firebaseService.deleteExtraRevenue(id);
 				}
 			}
 
@@ -1181,6 +1306,19 @@ class App {
 					isSpecialContract: isSpecialContract // Salva o tipo de contrato
 				};
 
+				// [NOVO] Lê diligências pendentes recém-adicionadas no form
+				const diligenciaTags = document.querySelectorAll('#diligenciasContainer .diligencia-tag');
+				const pendingDiligencias = Array.from(diligenciaTags).map(tag => ({
+					number: 'Dilig.',
+					description: Utils.sanitizeText(tag.dataset.description),
+					value: parseFloat(tag.dataset.value),
+					dueDate: new Date(tag.dataset.dueDate + 'T12:00:00Z').toISOString(),
+					status: 'Pendente',
+					valuePaid: 0,
+					paymentDate: null,
+					isDiligencia: true
+				}));
+
 				// Função helper para gerar parcelas PADRÃO
 				const generateStandardParcels = () => {
 					const parcels = [];
@@ -1246,9 +1384,10 @@ class App {
 
 					if (generatedData === null) return; // Falha na validação
 
+					const diligenciasTotal = pendingDiligencias.reduce((sum, d) => sum + d.value, 0);
 					Object.assign(contractData, {
-						totalValue: generatedData.totalValue,
-						parcels: generatedData.parcels,
+						totalValue: generatedData.totalValue + diligenciasTotal,
+						parcels: [...generatedData.parcels, ...pendingDiligencias],
 						successFee: Utils.sanitizeText(document.getElementById('taxaExito').value) || null,
 					});
 				}
@@ -1304,14 +1443,20 @@ class App {
 
 						if (generatedData === null) return; // Falha na validação
 
-						contractData.parcels = generatedData.parcels; // Sobrescreve as parcelas antigas
-						contractData.totalValue = generatedData.totalValue; // Sobrescreve o valor total
-						Utils.showToast('Parcelas recalculadas com sucesso!', 'info');
+						const oldDiligencias = (existingContract.parcels || []).filter(p => p.isDiligencia);
+						const totalDiligencias = oldDiligencias.reduce((sum, d) => sum + d.value, 0) + pendingDiligencias.reduce((sum, d) => sum + d.value, 0);
+
+						contractData.parcels = [...generatedData.parcels, ...oldDiligencias, ...pendingDiligencias]; 
+						contractData.totalValue = generatedData.totalValue + totalDiligencias; 
+						Utils.showToast('Parcelas recaluladas com sucesso!', 'info');
 					} else if (existingContract) {
-						// Mantém as parcelas existentes se nada mudou
-						contractData.parcels = existingContract.parcels;
-						contractData.totalValue = existingContract.totalValue; // Mantém valor total
+						// Mantém as parcelas existentes se nada mudou, mas anexa novas diligências
+						contractData.parcels = [...existingContract.parcels, ...pendingDiligencias];
+						contractData.totalValue = existingContract.totalValue + pendingDiligencias.reduce((sum, d) => sum + d.value, 0); 
 					}
+
+					// Limpa o container de diligências após processar
+					document.getElementById('diligenciasContainer').innerHTML = '';
 
 					// Preserva outros campos importantes
 					contractData.successFeeValueReceived = existingContract?.successFeeValueReceived || 0;
@@ -2350,6 +2495,26 @@ class App {
 					deadlineHtml = `<span class="text-xs text-gray-400 ml-2">(${Utils.formatDate(prazo)})</span>`;
 				}
 				tag.innerHTML = `<span>${serviceName}${deadlineHtml}</span><span class="remove-tag" onclick="this.parentElement.remove()">&times;</span>`;
+				container.appendChild(tag);
+			}
+
+			// [NOVO] Tag visual para Diligências pendentes de salvamento
+			createDiligenciaTag(description, value, dueDate) {
+				const container = document.getElementById('diligenciasContainer');
+				const tag = this.domBuilder.buildElement('div', { className: 'diligencia-tag flex items-center justify-between bg-gray-800 border border-gray-700 p-2 rounded mb-2' });
+				tag.dataset.description = description;
+				tag.dataset.value = value;
+				tag.dataset.dueDate = dueDate;
+
+				const prazo = new Date(dueDate + "T12:00:00Z");
+				
+				tag.innerHTML = `
+					<div class="flex flex-col">
+						<span class="text-white text-sm font-semibold">${description} <span class="text-xs text-orange-400 bg-orange-400/10 px-1 py-0.5 rounded ml-2">Diligência</span></span>
+						<span class="text-xs text-gray-400 mt-1"><i class="fas fa-calendar-alt mr-1"></i>Venc: ${Utils.formatDate(prazo)} &nbsp;|&nbsp; <i class="fas fa-dollar-sign mr-1"></i>Valor: ${Utils.formatCurrency(value)}</span>
+					</div>
+					<button type="button" class="text-red-400 hover:text-red-300 font-bold text-lg p-2" onclick="this.parentElement.remove()">&times;</button>
+				`;
 				container.appendChild(tag);
 			}
 

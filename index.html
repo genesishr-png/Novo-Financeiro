@@ -123,6 +123,10 @@
 					<i class="fas fa-chart-pie w-5 text-center"></i>
 					<span>Relatórios</span>
 				</a>
+				<a onclick="window.App.showPage('page-avulsas')" id="tab-avulsas" class="sidebar-nav-item">
+					<i class="fas fa-hand-holding-usd w-5 text-center"></i>
+					<span>Receitas Avulsas</span>
+				</a>
 				<a onclick="window.App.showPage('page-lixeira')" id="tab-lixeira" class="sidebar-nav-item">
 					<i class="fas fa-trash-alt w-5 text-center"></i>
 					<span>Lixeira</span>
@@ -506,6 +510,37 @@
 					</div>
 				</div>
 
+				<!-- [NOVO] Página de Receitas Avulsas -->
+				<div id="page-avulsas" class="hidden">
+					<div class="flex flex-wrap justify-between items-center mb-6 gap-4 border-b border-gray-700 pb-4">
+						<h2 class="text-2xl font-semibold text-white">Receitas Avulsas</h2>
+						<button onclick="window.App.openReceitaAvulsaModal()"
+							class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-2 px-5 rounded-lg shadow-lg transition-all duration-200 flex items-center gap-2">
+							<i class="fas fa-plus-circle"></i> Nova Receita
+						</button>
+					</div>
+					<!-- Tabela de receitas avulsas -->
+					<div class="overflow-x-auto">
+						<table class="w-full text-left border-collapse" id="table-receitas-avulsas">
+							<thead>
+								<tr class="bg-gray-800 text-gray-400 text-sm border-b border-gray-700">
+									<th class="p-3 font-semibold">Descrição</th>
+									<th class="p-3 font-semibold">Cliente/Origem</th>
+									<th class="p-3 font-semibold">Data</th>
+									<th class="p-3 font-semibold">Valor</th>
+									<th class="p-3 font-semibold text-right">Ações</th>
+								</tr>
+							</thead>
+							<tbody id="receitasAvulsasList" class="divide-y divide-gray-700/50">
+							</tbody>
+						</table>
+					</div>
+					<div id="receitasAvulsasEmptyState" class="hidden text-center py-10">
+						<i class="fas fa-money-check-alt fa-3x text-gray-600 mb-3"></i>
+						<p class="font-bold text-xl text-gray-400">Nenhuma receita avulsa registrada.</p>
+					</div>
+				</div>
+
 				<div id="page-lixeira" class="hidden">
 					<div class="flex justify-between items-center mb-4">
 						<h2 class="text-2xl font-semibold text-white">Lixeira de Contratos</h2>
@@ -577,6 +612,10 @@
 				class="mobile-nav-item admin-only">
 				<i class="fas fa-chart-pie text-xl"></i>
 				<span class="text-xs mt-1">Relat.</span>
+			</a>
+			<a onclick="window.App.showPage('page-avulsas')" id="mobile-tab-avulsas" class="mobile-nav-item">
+				<i class="fas fa-hand-holding-usd text-xl"></i>
+				<span class="text-xs mt-1">Avulsas</span>
 			</a>
 			<a onclick="window.App.showPage('page-lixeira')" id="mobile-tab-lixeira" class="mobile-nav-item">
 				<i class="fas fa-trash-alt text-xl"></i>
@@ -672,6 +711,20 @@
 							<button type="button" id="addServiceButton"
 								class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold py-2 px-3 rounded-lg">Adicionar</button>
 						</div>
+					</div>
+				</div>
+				<!-- [NOVO] Seção de Diligências -->
+				<div>
+					<label class="block text-sm font-medium text-gray-400 mb-1">Diligências e Custas Extras</label>
+					<div class="mt-1 p-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm">
+						<div id="diligenciasContainer" class="flex flex-col gap-2 mb-2"></div>
+						<div class="flex flex-wrap md:flex-nowrap gap-2">
+							<input type="text" id="contratoDiligenciaDesc" class="flex-grow outline-none bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white" placeholder="Ex: Viagem, Cartório...">
+							<input type="number" id="contratoDiligenciaValor" step="0.01" class="w-full md:w-32 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-white px-3 py-2" placeholder="Valor (R$)">
+							<input type="date" id="contratoDiligenciaData" class="w-full md:w-40 bg-gray-700 border border-gray-600 rounded-md shadow-sm text-gray-400 px-3 py-2" style="color-scheme: dark;">
+							<button type="button" id="addDiligenciaButton" class="bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold py-2 px-3 rounded-lg w-full md:w-auto">Adicionar</button>
+						</div>
+						<p class="text-xs text-gray-500 mt-1">Diligências serão adicionadas como cobranças extras na fatura deste contrato.</p>
 					</div>
 				</div>
 				<div>
@@ -905,6 +958,41 @@
 			<div class="flex justify-end p-4 bg-gray-900/50 border-t border-gray-700">
 				<button type="button" onclick="window.App.closeModal('modalDespesa')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg mr-2">Cancelar</button>
 				<button type="submit" class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">Salvar Despesa</button>
+			</div>
+		</form>
+	</div>
+
+	<!-- [NOVO] Modal de Receita Avulsa -->
+	<div id="modalReceitaAvulsa" class="modal bg-gray-800 rounded-lg shadow-xl w-11/12 md:w-1/3 overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="modalReceitaTitle">
+		<div class="flex justify-between items-center p-5 bg-gray-900/50 border-b border-gray-700">
+			<h2 id="modalReceitaTitle" class="text-2xl font-bold text-white">Registrar Receita Avulsa</h2>
+			<button onclick="window.App.closeModal('modalReceitaAvulsa')" class="text-gray-400 hover:text-white text-2xl transition-colors duration-150" aria-label="Fechar modal">&times;</button>
+		</div>
+		<form id="formReceitaAvulsa">
+			<div class="p-6 space-y-4 modal-body">
+				<input type="hidden" id="receitaId">
+				<div>
+					<label for="receitaDescricao" class="block text-sm font-medium text-gray-400 mb-1">Descrição</label>
+					<input type="text" id="receitaDescricao" placeholder="Ex: Consulta, Honorários de Sucumbência..." class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200" required>
+				</div>
+				<div>
+					<label for="receitaOrigem" class="block text-sm font-medium text-gray-400 mb-1">Cliente / Origem</label>
+					<input type="text" id="receitaOrigem" placeholder="Nome do pagador" class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200" required>
+				</div>
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label for="receitaData" class="block text-sm font-medium text-gray-400 mb-1">Data do Recebimento</label>
+						<input type="date" id="receitaData" class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200" required style="color-scheme: dark;">
+					</div>
+					<div>
+						<label for="receitaValor" class="block text-sm font-medium text-gray-400 mb-1">Valor (R$)</label>
+						<input type="number" step="0.01" id="receitaValor" class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200" required>
+					</div>
+				</div>
+			</div>
+			<div class="flex justify-end p-4 bg-gray-900/50 border-t border-gray-700">
+				<button type="button" onclick="window.App.closeModal('modalReceitaAvulsa')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg mr-2">Cancelar</button>
+				<button type="submit" class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">Salvar Receita</button>
 			</div>
 		</form>
 	</div>
