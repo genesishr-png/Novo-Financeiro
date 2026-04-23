@@ -45,19 +45,26 @@ export class ReportHandler {
 					const d = new Date(parcel.dueDate);
 					if (d >= startDate && d <= endDate) {
 						const pagador = parcel.paidBy || 'Escritório';
+						const isReimbursed = parcel.isReimbursed || false;
+						
 						const entry = {
 							descricao: parcel.description || 'Diligência',
 							valor: parcel.value,
 							data: d,
 							status: parcel.status,
-							pagador
+							pagador,
+							isReimbursed
 						};
+						
 						if (pagador === 'Cliente') {
 							custasClienteContrato.push(entry);
 							totalCustasCliente += parcel.value;
 						} else {
 							custasEscritorioContrato.push(entry);
-							totalCustasEscritorio += parcel.value;
+							// Se o escritório pagou e ainda NÃO foi reembolsado, entra como custo no Saldo Líquido
+							if (!isReimbursed) {
+								totalCustasEscritorio += parcel.value;
+							}
 						}
 					}
 					return; // diligências não entram no totalParcelas
@@ -136,7 +143,7 @@ export class ReportHandler {
 		}
 
 		const totalGeral = totalParcelas + totalExito + totalReceitasAvulsas;
-		const saldoLiquido = totalGeral - totalDespesas;
+		const saldoLiquido = totalGeral - totalDespesas - totalCustasEscritorio;
 		const totalContratos = Object.values(newContractsByMonth).reduce((a, b) => a + b, 0);
 
 		return {

@@ -44,6 +44,7 @@ class App {
 				this.viewMode = 'cliente'; // [NOVO] 'cliente' | 'escritorio'
 				this.currentContractSort = 'name-asc';
 				this.currentParcelasSort = 'days-asc'; // [MUDANÇA v5.6] Renomeado e mudou o padrão
+				this.currentParcelasTypeFilter = 'parcelas'; // [NOVO v5.9]
 				this.currentServicosSort = 'name-asc';
 				this.contractListPage = 0;
 				this.contractStatusFilter = 'ativos';
@@ -858,7 +859,11 @@ class App {
 
 					for (let i = 0; i < contract.parcels.length; i++) {
 						const parcel = contract.parcels[i];
-						// [NOVO v5.6] Mostra TODAS as parcelas pendentes
+						
+						// [MUDANÇA v5.9] Filtro de Tipo (Parcelas vs Diligências)
+						if (this.currentParcelasTypeFilter === 'parcelas' && parcel.isDiligencia) continue;
+						if (this.currentParcelasTypeFilter === 'diligencias' && !parcel.isDiligencia) continue;
+
 						if (parcel.status === 'Pendente') {
 							const vencimento = new Date(parcel.dueDate);
 							const diffDays = Math.ceil((vencimento - hoje) / 86400000);
@@ -896,7 +901,97 @@ class App {
 				container.append(fragment);
 			}
 
-			renderServicosPage() {
+			// [NOVO v5.9] Toggle entre Parcelas e Diligências na página
+			setParcelasTypeFilter(type) {
+				this.currentParcelasTypeFilter = type;
+				
+				// Atualiza botões
+				const btnParc = document.getElementById('filter-type-parcelas');
+				const btnDilig = document.getElementById('filter-type-diligencias');
+				
+				if (type === 'parcelas') {
+					btnParc.classList.replace('text-gray-400', 'text-white');
+					btnParc.classList.add('bg-indigo-600', 'shadow-lg');
+					btnDilig.classList.replace('text-white', 'text-gray-400');
+					btnDilig.classList.remove('bg-indigo-600', 'shadow-lg');
+				} else {
+					btnDilig.classList.replace('text-gray-400', 'text-white');
+					btnDilig.classList.add('bg-indigo-600', 'shadow-lg');
+					btnParc.classList.replace('text-white', 'text-gray-400');
+					btnParc.classList.remove('bg-indigo-600', 'shadow-lg');
+				}
+				
+				this.renderParcelasPage();
+			}
+
+			// [NOVO v5.9] Toggle de Status de Reembolso
+			async toggleReimbursementStatus(contractId, parcelIndex) {
+				const contract = this.database.contracts.find(c => c.id === contractId);
+				if (!contract || !contract.parcels[parcelIndex]) return;
+				
+				const parcel = contract.parcels[parcelIndex];
+				parcel.isReimbursed = !parcel.isReimbursed;
+				
+				try {
+					await this.updateContractInFirebase(contractId, { parcels: contract.parcels });
+					Utils.showToast(parcel.isReimbursed ? 'Marcado como reembolsado!' : 'Reembolso pendente.', 'success');
+					this.renderParcelasPage();
+					
+					// Se o modal de contrato estiver aberto, atualiza a lista de diligências salvas
+					if (this.openModalId === 'modalContrato') {
+						this.renderSavedDiligenciasList(contract);
+					}
+				} catch (e) {
+					console.error(e);
+					Utils.showToast('Erro ao atualizar status de reembolso.', 'error');
+				}
+			}
+
+			// [NOVO v5.9] Toggle entre Parcelas e Diligências na página
+			setParcelasTypeFilter(type) {
+				this.currentParcelasTypeFilter = type;
+				
+				// Atualiza botões
+				const btnParc = document.getElementById('filter-type-parcelas');
+				const btnDilig = document.getElementById('filter-type-diligencias');
+				
+				if (type === 'parcelas') {
+					btnParc?.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+					btnParc?.classList.remove('text-gray-400');
+					btnDilig?.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+					btnDilig?.classList.add('text-gray-400');
+				} else {
+					btnDilig?.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+					btnDilig?.classList.remove('text-gray-400');
+					btnParc?.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+					btnParc?.classList.add('text-gray-400');
+				}
+				
+				this.renderParcelasPage();
+			}
+
+			// [NOVO v5.9] Toggle de Status de Reembolso
+			async toggleReimbursementStatus(contractId, parcelIndex) {
+				const contract = this.database.contracts.find(c => c.id === contractId);
+				if (!contract || !contract.parcels[parcelIndex]) return;
+				
+				const parcel = contract.parcels[parcelIndex];
+				parcel.isReimbursed = !parcel.isReimbursed;
+				
+				try {
+					await this.updateContractInFirebase(contractId, { parcels: contract.parcels });
+					Utils.showToast(parcel.isReimbursed ? 'Marcado como reembolsado!' : 'Reembolso pendente.', 'success');
+					this.renderParcelasPage();
+					
+					// Se o modal de contrato estiver aberto, atualiza a lista de diligências salvas
+					if (this.openModalId === 'modalContrato') {
+						this.renderSavedDiligenciasList(contract);
+					}
+				} catch (e) {
+					console.error(e);
+					Utils.showToast('Erro ao atualizar status de reembolso.', 'error');
+				}
+			}
 				const contractsToRender = this.getFilteredContracts(false);
 				const container = document.getElementById('servicosListContainer');
 				const searchTerm = (document.getElementById('servicosSearchInput').value || '').toLowerCase();
@@ -2284,6 +2379,9 @@ class App {
 						document.getElementById('contratoTipoPagamento').value = contract.paymentType || 'Parcelado';
 						document.getElementById('contratoObservacoes').value = contract.observations || '';
 
+						// [NOVO v5.9] Renderiza Diligências Já Salvas
+						this.renderSavedDiligenciasList(contract);
+
 						// [NOVO v5.8] Renderiza Arquivos do Contrato
 						this.renderContractAttachmentsList(contract.contractAttachments || [], contract.id);
 
@@ -3552,6 +3650,136 @@ class App {
 			// ================== FIM DO CÓDIGO NOVO ==================
 			// ...
 			// Fim Mudança v5
+
+			// [NOVO v5.9] Toggle entre Parcelas e Diligências na página
+			setParcelasTypeFilter(type) {
+				this.currentParcelasTypeFilter = type;
+				
+				// Atualiza botões
+				const btnParc = document.getElementById('filter-type-parcelas');
+				const btnDilig = document.getElementById('filter-type-diligencias');
+				
+				if (type === 'parcelas') {
+					btnParc?.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+					btnParc?.classList.remove('text-gray-400');
+					btnDilig?.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+					btnDilig?.classList.add('text-gray-400');
+				} else {
+					btnDilig?.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
+					btnDilig?.classList.remove('text-gray-400');
+					btnParc?.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
+					btnParc?.classList.add('text-gray-400');
+				}
+				
+				this.renderParcelasPage();
+			}
+
+			// [NOVO v5.9] Toggle de Status de Reembolso
+			async toggleReimbursementStatus(contractId, parcelIndex) {
+				const contract = this.database.contracts.find(c => c.id === contractId);
+				if (!contract || !contract.parcels[parcelIndex]) return;
+				
+				const parcel = contract.parcels[parcelIndex];
+				parcel.isReimbursed = !parcel.isReimbursed;
+				
+				try {
+					await this.updateContractInFirebase(contractId, { parcels: contract.parcels });
+					Utils.showToast(parcel.isReimbursed ? 'Marcado como reembolsado!' : 'Reembolso pendente.', 'success');
+					this.renderParcelasPage();
+					
+					// Se o modal de contrato estiver aberto, atualiza a lista de diligências salvas
+					if (this.openModalId === 'modalContrato') {
+						this.renderSavedDiligenciasList(contract);
+					}
+				} catch (e) {
+					console.error(e);
+					Utils.showToast('Erro ao atualizar status de reembolso.', 'error');
+				}
+			}
+
+			// [NOVO v5.9] Renderiza lista de diligências já persistidas no Firebase
+			renderSavedDiligenciasList(contract) {
+				const container = document.getElementById('savedDiligenciasContainer');
+				if (!container) return;
+				container.innerHTML = '';
+				
+				const diligencias = (contract.parcels || []).filter(p => p.isDiligencia);
+				
+				if (diligencias.length === 0) {
+					container.classList.add('hidden');
+					return;
+				}
+				
+				container.classList.remove('hidden');
+				
+				diligencias.forEach((d) => {
+					const realIndex = contract.parcels.findIndex(p => p === d);
+					const item = this.domBuilder.buildElement('div', { className: 'bg-gray-800 border border-gray-700 p-3 rounded-xl flex items-center justify-between hover:border-indigo-500/50 transition-colors' });
+					
+					const isReimbursed = d.isReimbursed || false;
+					const paidByOffice = (d.paidBy === 'Escritório' || d.paidBy === 'Escritrio');
+					
+					let statusBadge = '';
+					if (paidByOffice) {
+						statusBadge = isReimbursed 
+							? '<span class="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold ml-2">REEMBOLSADO</span>'
+							: '<span class="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold ml-2">PENDENTE REEMBOLSO</span>';
+					}
+
+					item.innerHTML = `
+						<div class="flex flex-col">
+							<span class="text-white text-sm font-semibold flex items-center">${d.description} ${statusBadge}</span>
+							<span class="text-[11px] text-gray-500 mt-1 uppercase tracking-tight">${Utils.formatCurrency(d.value)} • ${Utils.formatDate(d.dueDate)} • PAGADOR: ${d.paidBy}</span>
+						</div>
+						<div class="flex items-center gap-3">
+							${paidByOffice ? `
+								<button type="button" class="text-xs ${isReimbursed ? 'text-orange-400' : 'text-indigo-400'} hover:underline font-bold transition-all" onclick="window.App.toggleReimbursementStatus('${contract.id}', ${realIndex})">
+									${isReimbursed ? 'ESTORNAR' : 'MARCAR PAGO'}
+								</button>
+							` : ''}
+							<button type="button" class="w-8 h-8 flex items-center justify-center bg-red-900/20 text-red-400 hover:bg-red-900/40 rounded-lg transition-all" onclick="window.App.removeSavedDiligencia('${contract.id}', ${realIndex})">
+								<i class="fas fa-trash-alt text-xs"></i>
+							</button>
+						</div>
+					`;
+					container.appendChild(item);
+				});
+			}
+
+			async removeSavedDiligencia(contractId, realIndex) {
+				if (!confirm('Deseja remover esta diligência permanentemente?')) return;
+				const contract = this.database.contracts.find(c => c.id === contractId);
+				if (!contract) return;
+				contract.parcels.splice(realIndex, 1);
+				try {
+					await this.updateContractInFirebase(contractId, { parcels: contract.parcels });
+					Utils.showToast('Diligência removida!', 'success');
+					this.renderSavedDiligenciasList(contract);
+					this.renderParcelasPage();
+				} catch (e) {
+					console.error(e);
+					Utils.showToast('Erro ao remover diligência.', 'error');
+				}
+			}
+
+			createDiligenciaTag(description, value, dueDate, paidBy) {
+				const container = document.getElementById('diligenciasContainer');
+				const tag = this.domBuilder.buildElement('div', { className: 'flex items-center justify-between bg-gray-700/50 p-2 rounded-lg' });
+				tag.dataset.description = description;
+				tag.dataset.value = value;
+				tag.dataset.dueDate = dueDate;
+				tag.dataset.paidBy = paidBy;
+				tag.dataset.isDiligencia = 'true';
+
+				tag.innerHTML = `
+					<div class="flex flex-col">
+						<span class="text-white text-xs font-semibold">${description}</span>
+						<span class="text-[10px] text-gray-400">${Utils.formatCurrency(value)} | ${Utils.formatDate(dueDate)} | ${paidBy}</span>
+					</div>
+					<button type="button" class="text-red-400 hover:text-red-300 font-bold ml-2" onclick="this.parentElement.remove()">&times;</button>
+				`;
+				container.appendChild(tag);
+			}
 
 			_formatCSVCell(data) {
 				if (data == null) return '';

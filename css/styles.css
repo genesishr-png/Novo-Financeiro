@@ -64,17 +64,33 @@
 			padding-right: 8px;
 		}
 
+		/* [NOVO v5.9] Animações e Scrollbar Premium */
+		@keyframes spin-slow {
+			from { transform: rotate(0deg); }
+			to { transform: rotate(360deg); }
+		}
+
+		.animate-hover-spin:hover {
+			animation: spin-slow 2s linear infinite;
+		}
+
 		::-webkit-scrollbar {
-			width: 8px;
+			width: 6px;
+			height: 6px;
+		}
+
+		::-webkit-scrollbar-track {
+			background: #111827;
 		}
 
 		::-webkit-scrollbar-thumb {
-			background: #4b5563;
+			background: #374151;
 			border-radius: 10px;
+			border: 1px solid #111827;
 		}
 
 		::-webkit-scrollbar-thumb:hover {
-			background: #6b7280;
+			background: #4f46e5;
 		}
 
 		.service-tag {
