@@ -151,13 +151,15 @@ class App {
 					const descInput = document.getElementById('contratoDiligenciaDesc');
 					const valorInput = document.getElementById('contratoDiligenciaValor');
 					const dataInput = document.getElementById('contratoDiligenciaData');
+					const pagadorInput = document.getElementById('contratoDiligenciaPagador');
 
 					const desc = Utils.sanitizeText(descInput.value);
 					const valor = Utils.parseNumber(valorInput.value);
 					const data = dataInput.value;
+					const pagador = pagadorInput?.value || 'Escritório';
 
 					if (desc && !isNaN(valor) && valor > 0 && data) {
-						this.createDiligenciaTag(desc, valor, data);
+						this.createDiligenciaTag(desc, valor, data, pagador);
 						descInput.value = '';
 						valorInput.value = '';
 						dataInput.value = '';
@@ -1462,7 +1464,8 @@ class App {
 					status: 'Pendente',
 					valuePaid: 0,
 					paymentDate: null,
-					isDiligencia: true
+					isDiligencia: true,
+					paidBy: tag.dataset.paidBy || 'Escritório'
 				}));
 
 				// Função helper para gerar parcelas PADRÃO
@@ -2683,18 +2686,21 @@ class App {
 			}
 
 			// [NOVO] Tag visual para Diligências pendentes de salvamento
-			createDiligenciaTag(description, value, dueDate) {
+			createDiligenciaTag(description, value, dueDate, pagador = 'Escritório') {
 				const container = document.getElementById('diligenciasContainer');
 				const tag = this.domBuilder.buildElement('div', { className: 'diligencia-tag flex items-center justify-between bg-gray-800 border border-gray-700 p-2 rounded mb-2' });
 				tag.dataset.description = description;
 				tag.dataset.value = value;
 				tag.dataset.dueDate = dueDate;
+				tag.dataset.paidBy = pagador;
 
 				const prazo = new Date(dueDate + "T12:00:00Z");
+				const pagadorColor = pagador === 'Cliente' ? 'text-blue-400 bg-blue-400/10' : 'text-purple-400 bg-purple-400/10';
+				const pagadorIcon = pagador === 'Cliente' ? '&#128100;' : '&#127970;';
 				
 				tag.innerHTML = `
 					<div class="flex flex-col">
-						<span class="text-white text-sm font-semibold">${description} <span class="text-xs text-orange-400 bg-orange-400/10 px-1 py-0.5 rounded ml-2">Diligência</span></span>
+						<span class="text-white text-sm font-semibold">${description} <span class="text-xs text-orange-400 bg-orange-400/10 px-1 py-0.5 rounded ml-2">Diligência</span> <span class="text-xs ${pagadorColor} px-1 py-0.5 rounded ml-1">${pagadorIcon} ${pagador} pagou</span></span>
 						<span class="text-xs text-gray-400 mt-1"><i class="fas fa-calendar-alt mr-1"></i>Venc: ${Utils.formatDate(prazo)} &nbsp;|&nbsp; <i class="fas fa-dollar-sign mr-1"></i>Valor: ${Utils.formatCurrency(value)}</span>
 					</div>
 					<button type="button" class="text-red-400 hover:text-red-300 font-bold text-lg p-2" onclick="this.parentElement.remove()">&times;</button>
