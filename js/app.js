@@ -3190,29 +3190,48 @@ class App {
 				doc.addPage();
 				doc.setTextColor(0);
 				doc.setFontSize(18);
-				doc.text('2. Recebimentos de Contratos', 14, 22);
-				doc.setFontSize(10);
-				doc.setTextColor(100);
-				doc.text('Inclui parcelas de honorarios e taxas de exito.', 14, 28);
+				doc.text('2. Detalhamento de Recebimentos', 14, 22);
 				
-				const honorarios = data.detailedPayments.filter(p => p.value > 0 && p.type !== 'Receita Avulsa');
+				const parcelas = data.detailedPayments.filter(p => p.value > 0 && p.type.includes('Parcela'));
+				const taxasExito = data.detailedPayments.filter(p => p.type === 'Taxa de Êxito');
 				const receitasAvulsas = data.detailedPayments.filter(p => p.type === 'Receita Avulsa');
 				const despesasLista = data.detailedPayments.filter(p => p.value < 0);
 
+				// 2.1 PARCELAS
+				doc.setFontSize(14);
+				doc.setTextColor(22, 163, 74); // verde
+				doc.text('2.1 Parcelas de Honorarios Mensais', 14, 32);
+				doc.setTextColor(0);
 				doc.autoTable({
-					startY: 33,
-					head: [['Cliente', 'Tipo', 'Data', 'Advogado', 'Valor']],
-					body: honorarios.map(p => [p.clientName, p.type, Utils.formatDate(p.date), p.advogado, Utils.formatCurrency(p.value)]),
+					startY: 35,
+					head: [['Cliente', 'Parcela', 'Data', 'Advogado', 'Valor']],
+					body: parcelas.map(p => [p.clientName, p.type, Utils.formatDate(p.date), p.advogado, Utils.formatCurrency(p.value)]),
 					theme: 'striped',
 					headStyles: { fillColor: [22, 163, 74] }
 				});
 
-				// ===== RECEITAS AVULSAS (SEPARADO) =====
+				// 2.2 TAXAS DE EXITO
+				if (taxasExito.length > 0) {
+					const yExito = doc.autoTable.previous.finalY + 15;
+					doc.setFontSize(14);
+					doc.setTextColor(234, 88, 12); // laranja
+					doc.text('2.2 Taxas de Exito', 14, yExito);
+					doc.setTextColor(0);
+					doc.autoTable({
+						startY: yExito + 5,
+						head: [['Cliente', 'Tipo', 'Data', 'Advogado', 'Valor']],
+						body: taxasExito.map(p => [p.clientName, p.type, Utils.formatDate(p.date), p.advogado, Utils.formatCurrency(p.value)]),
+						theme: 'striped',
+						headStyles: { fillColor: [234, 88, 12] }
+					});
+				}
+
+				// 2.3 RECEITAS AVULSAS
 				if (receitasAvulsas.length > 0) {
 					const yAvulsa = doc.autoTable.previous.finalY + 15;
-					doc.setFontSize(16);
+					doc.setFontSize(14);
 					doc.setTextColor(79, 70, 229); // indigo
-					doc.text('2.1 Receitas Avulsas / Outras Origens', 14, yAvulsa);
+					doc.text('2.3 Receitas Avulsas / Outras Origens', 14, yAvulsa);
 					doc.setTextColor(0);
 					doc.autoTable({
 						startY: yAvulsa + 5,
@@ -3223,13 +3242,13 @@ class App {
 					});
 				}
 
-				// ===== DESPESAS DO ESCRITORIO =====
+				// 2.4 DESPESAS DO ESCRITORIO
 				if (despesasLista.length > 0) {
 					const prevY = doc.autoTable.previous ? doc.autoTable.previous.finalY : 30;
 					const yD = prevY + 15;
 					doc.setFontSize(14);
 					doc.setTextColor(220, 38, 38);
-					doc.text('2.2 Despesas Operacionais do Escritorio', 14, yD);
+					doc.text('2.4 Despesas Operacionais do Escritorio', 14, yD);
 					doc.setTextColor(0);
 					doc.autoTable({
 						startY: yD + 5,
