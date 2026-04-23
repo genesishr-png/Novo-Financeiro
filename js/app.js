@@ -400,6 +400,9 @@ class App {
 					updatedAt: new Date().toISOString()
 				};
 
+				console.log("App: Tentando salvar despesa...", data);
+				console.log("App: FirebaseService status:", this.firebaseService.db ? "DB Pronto" : "DB Nulo");
+
 				let success = false;
 				if (id) {
 					success = await this.firebaseService.updateOfficeExpense(id, data);

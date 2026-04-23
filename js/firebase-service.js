@@ -17,6 +17,7 @@ export class FirebaseService {
 
 			setDB(dbInstance) {
 				this.db = dbInstance;
+				console.log("FirebaseService: Banco de dados configurado.");
 			}
 
 			startSnapshotListener(collectionName) {
@@ -63,13 +64,20 @@ export class FirebaseService {
 
 			async addOfficeExpense(expenseData) {
 				try {
+					if (!this.db) throw new Error("Banco de dados não inicializado.");
+					
 					const expensesCollection = collection(this.db, 'officeExpenses');
 					await addDoc(expensesCollection, expenseData);
+					
 					Utils.showToast('Despesa salva com sucesso.', 'success');
 					return true;
 				} catch (error) {
 					console.error("Erro ao adicionar despesa:", error);
-					Utils.showToast('Erro ao salvar a despesa.', 'error');
+					let msg = 'Erro ao salvar a despesa.';
+					if (error.code === 'permission-denied') {
+						msg = 'Permissão negada no banco de dados.';
+					}
+					Utils.showToast(msg, 'error');
 					return false;
 				}
 			}
