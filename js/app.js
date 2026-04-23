@@ -247,6 +247,10 @@ class App {
 				if (completePdfBtn) {
 					completePdfBtn.addEventListener('click', () => this.exportCompletePDF());
 				}
+				const reimbPdfBtn = document.getElementById('exportReimbursementPdfButton');
+				if (reimbPdfBtn) {
+					reimbPdfBtn.addEventListener('click', () => this.exportReimbursementPDF());
+				}
 
 				// [NOVO v5.6] Listeners para o modal de contrato
 				const financialInputs = ['valorTotal', 'numParcelas', 'vencimentoPrimeiraParcela', 'contratoJaQuitado'];
@@ -2826,6 +2830,8 @@ class App {
 				document.getElementById('exportPdfButton').disabled = false;
 				const completePdfBtn = document.getElementById('exportCompletePdfButton');
 				if (completePdfBtn) completePdfBtn.disabled = false;
+				const reimbPdfBtn = document.getElementById('exportReimbursementPdfButton');
+				if (reimbPdfBtn) reimbPdfBtn.disabled = false;
 
 				// 1. Renderiza KPIs
 				this.renderReportKPIs(data);
@@ -3184,24 +3190,46 @@ class App {
 				doc.addPage();
 				doc.setTextColor(0);
 				doc.setFontSize(18);
-				doc.text('2. Recebimentos Detalhados', 14, 22);
-				const recebimentos = data.detailedPayments.filter(p => p.value > 0);
+				doc.text('2. Recebimentos de Contratos', 14, 22);
+				doc.setFontSize(10);
+				doc.setTextColor(100);
+				doc.text('Inclui parcelas de honorarios e taxas de exito.', 14, 28);
+				
+				const honorarios = data.detailedPayments.filter(p => p.value > 0 && p.type !== 'Receita Avulsa');
+				const receitasAvulsas = data.detailedPayments.filter(p => p.type === 'Receita Avulsa');
 				const despesasLista = data.detailedPayments.filter(p => p.value < 0);
+
 				doc.autoTable({
-					startY: 28,
-					head: [['Cliente / Origem', 'Tipo', 'Data', 'Advogado', 'Valor']],
-					body: recebimentos.map(p => [p.clientName, p.type, Utils.formatDate(p.date), p.advogado, Utils.formatCurrency(p.value)]),
+					startY: 33,
+					head: [['Cliente', 'Tipo', 'Data', 'Advogado', 'Valor']],
+					body: honorarios.map(p => [p.clientName, p.type, Utils.formatDate(p.date), p.advogado, Utils.formatCurrency(p.value)]),
 					theme: 'striped',
 					headStyles: { fillColor: [22, 163, 74] }
 				});
 
+				// ===== RECEITAS AVULSAS (SEPARADO) =====
+				if (receitasAvulsas.length > 0) {
+					const yAvulsa = doc.autoTable.previous.finalY + 15;
+					doc.setFontSize(16);
+					doc.setTextColor(79, 70, 229); // indigo
+					doc.text('2.1 Receitas Avulsas / Outras Origens', 14, yAvulsa);
+					doc.setTextColor(0);
+					doc.autoTable({
+						startY: yAvulsa + 5,
+						head: [['Origem', 'Descricao', 'Data', 'Valor']],
+						body: receitasAvulsas.map(p => [p.clientName, p.type, Utils.formatDate(p.date), Utils.formatCurrency(p.value)]),
+						theme: 'striped',
+						headStyles: { fillColor: [79, 70, 229] }
+					});
+				}
+
 				// ===== DESPESAS DO ESCRITORIO =====
 				if (despesasLista.length > 0) {
 					const prevY = doc.autoTable.previous ? doc.autoTable.previous.finalY : 30;
-					const yD = prevY + 12;
+					const yD = prevY + 15;
 					doc.setFontSize(14);
 					doc.setTextColor(220, 38, 38);
-					doc.text('2.1 Despesas do Escritorio', 14, yD);
+					doc.text('2.2 Despesas Operacionais do Escritorio', 14, yD);
 					doc.setTextColor(0);
 					doc.autoTable({
 						startY: yD + 5,
@@ -3212,62 +3240,55 @@ class App {
 					});
 				}
 
-				// ===== REEMBOLSOS PENDENTES (CUSTAS PAGAS PELO ESCRITORIO) =====
-				if (data.totalCustasEscritorio > 0) {
-					doc.addPage();
-					doc.setFontSize(18);
-					doc.setTextColor(168, 85, 247); // roxo
-					doc.text('3. Reembolsos Pendentes do Escritorio', 14, 22);
-					doc.setFontSize(10);
-					doc.setTextColor(100);
-					doc.text(`Total a reembolsar: ${Utils.formatCurrency(data.totalCustasEscritorio)}`, 14, 30);
-					doc.text('Estas custas foram pagas pelo escritorio e devem ser reembolsadas pelo cliente ao fim do processo.', 14, 37);
+				// ===== UNIFICADO: CUSTAS E DILIGENCIAS =====
+				doc.addPage();
+				doc.setFontSize(18);
+				doc.setTextColor(168, 85, 247); // roxo
+				doc.text('3. Custas e Diligencias (Resumo)', 14, 22);
+				
+				doc.autoTable({
+					startY: 28,
+					head: [['Categoria', 'Total']],
+					body: [
+						['Custas Pagas pelo Escritorio (a reembolsar)', Utils.formatCurrency(data.totalCustasEscritorio)],
+						['Custas Pagas pelo Cliente (ja quitadas)', Utils.formatCurrency(data.totalCustasCliente)],
+						['Total Geral de Custas', Utils.formatCurrency(data.totalCustasEscritorio + data.totalCustasCliente)]
+					],
+					theme: 'grid',
+					headStyles: { fillColor: [168, 85, 247] }
+				});
 
+				if (data.totalCustasEscritorio > 0) {
+					doc.setFontSize(14);
+					doc.text('3.1 Reembolsos Pendentes (Pagos pelo Escritorio)', 14, doc.autoTable.previous.finalY + 15);
 					const reembolsoRows = [];
 					(data.diligenciasPorContrato || []).forEach(c => {
-						c.custasEscritorio.forEach(d => {
+						(c.custasEscritorio || []).forEach(d => {
 							reembolsoRows.push([c.clientName, c.advogado, d.descricao, Utils.formatDate(d.data), d.status || 'Pendente', Utils.formatCurrency(d.valor)]);
 						});
 					});
-					doc.setTextColor(0);
 					doc.autoTable({
-						startY: 44,
-						head: [['Cliente', 'Advogado', 'Descricao', 'Data', 'Status', 'Valor a Reembolsar']],
+						startY: doc.autoTable.previous.finalY + 20,
+						head: [['Cliente', 'Advogado', 'Descricao', 'Data', 'Status', 'Valor']],
 						body: reembolsoRows,
 						theme: 'striped',
-						headStyles: { fillColor: [168, 85, 247] },
-						didParseCell: (hook) => {
-							if (hook.section === 'body' && hook.column.index === 4) {
-								hook.cell.styles.textColor = hook.cell.raw === 'Paga' ? [22, 163, 74] : [220, 38, 38];
-								hook.cell.styles.fontStyle = 'bold';
-							}
-							if (hook.section === 'body' && hook.column.index === 5) {
-								hook.cell.styles.textColor = [168, 85, 247];
-								hook.cell.styles.fontStyle = 'bold';
-							}
-						}
+						headStyles: { fillColor: [168, 85, 247] }
 					});
 				}
 
-				// ===== CUSTAS PAGAS PELO CLIENTE =====
 				if (data.totalCustasCliente > 0) {
 					const prevY = doc.autoTable.previous ? doc.autoTable.previous.finalY : 30;
-					const yC = prevY + 12;
-					const needNewPage = yC > 240;
-					if (needNewPage) doc.addPage();
-					const startYC = needNewPage ? 22 : yC;
 					doc.setFontSize(14);
 					doc.setTextColor(96, 165, 250); // azul
-					doc.text('4. Custas Pagas pelo Cliente', 14, startYC);
-					doc.setTextColor(0);
+					doc.text('3.2 Custas Pagas pelo Cliente', 14, prevY + 15);
 					const clienteRows = [];
 					(data.diligenciasPorContrato || []).forEach(c => {
-						c.custasCliente.forEach(d => {
+						(c.custasCliente || []).forEach(d => {
 							clienteRows.push([c.clientName, c.advogado, d.descricao, Utils.formatDate(d.data), Utils.formatCurrency(d.valor)]);
 						});
 					});
 					doc.autoTable({
-						startY: startYC + 5,
+						startY: prevY + 20,
 						head: [['Cliente', 'Advogado', 'Descricao', 'Data', 'Valor']],
 						body: clienteRows,
 						theme: 'striped',
@@ -3330,6 +3351,92 @@ class App {
 				doc.save(`Relatorio_Completo_${startDate.toISOString().split('T')[0]}_a_${endDate.toISOString().split('T')[0]}.pdf`);
 				Utils.showToast('Relatorio Completo gerado!', 'success');
 			}
+
+			// ===== NOVO: RELATÓRIO DE CUSTAS E REEMBOLSOS =====
+			exportReimbursementPDF() {
+				if (!this.currentAdvancedReportData) {
+					Utils.showToast('Gere um relatório primeiro.', 'error');
+					return;
+				}
+
+				const data = this.currentAdvancedReportData;
+				const { jsPDF } = window.jspdf;
+				const doc = new jsPDF();
+				const startDate = new Date(document.getElementById('reportStartDate').value + 'T12:00:00Z');
+				const endDate = new Date(document.getElementById('reportEndDate').value + 'T12:00:00Z');
+				const periodo = `${Utils.formatDate(startDate)} a ${Utils.formatDate(endDate)}`;
+
+				// Capa
+				doc.setFillColor(168, 85, 247); // Roxo
+				doc.rect(0, 0, 210, 297, 'F');
+				doc.setFontSize(28);
+				doc.setTextColor(255);
+				doc.text('RELATORIO DE CUSTAS', 105, 110, { align: 'center' });
+				doc.setFontSize(18);
+				doc.text('DILIGENCIAS E REEMBOLSOS', 105, 124, { align: 'center' });
+				doc.setFontSize(12);
+				doc.text(`Periodo: ${periodo}`, 105, 145, { align: 'center' });
+
+				// Pag 2 - Reembolsos Pendentes
+				doc.addPage();
+				doc.setTextColor(0);
+				doc.setFontSize(18);
+				doc.text('1. Reembolsos do Escritorio', 14, 22);
+				doc.setFontSize(10);
+				doc.setTextColor(100);
+				doc.text(`Total Pendente: ${Utils.formatCurrency(data.totalCustasEscritorio)}`, 14, 30);
+
+				const rows = [];
+				(data.diligenciasPorContrato || []).forEach(c => {
+					(c.custasEscritorio || []).forEach(d => {
+						rows.push([c.clientName, c.advogado, d.descricao, Utils.formatDate(d.data), d.status || 'Pendente', Utils.formatCurrency(d.valor)]);
+					});
+				});
+
+				doc.autoTable({
+					startY: 35,
+					head: [['Cliente', 'Advogado', 'Descricao', 'Data', 'Status', 'Valor']],
+					body: rows,
+					theme: 'grid',
+					headStyles: { fillColor: [168, 85, 247] },
+					didParseCell: (hook) => {
+						if (hook.section === 'body' && hook.column.index === 4) {
+							hook.cell.styles.textColor = hook.cell.raw === 'Paga' ? [22, 163, 74] : [220, 38, 38];
+							hook.cell.styles.fontStyle = 'bold';
+						}
+					}
+				});
+
+				// Pag 3 - Custas pagas pelo cliente (para conferência)
+				if (data.totalCustasCliente > 0) {
+					doc.addPage();
+					doc.setFontSize(18);
+					doc.setTextColor(96, 165, 250);
+					doc.text('2. Custas Pagas pelo Cliente', 14, 22);
+					doc.setFontSize(10);
+					doc.setTextColor(100);
+					doc.text(`Total ja quitado pelo cliente: ${Utils.formatCurrency(data.totalCustasCliente)}`, 14, 30);
+
+					const rowsC = [];
+					(data.diligenciasPorContrato || []).forEach(c => {
+						(c.custasCliente || []).forEach(d => {
+							rowsC.push([c.clientName, c.advogado, d.descricao, Utils.formatDate(d.data), Utils.formatCurrency(d.valor)]);
+						});
+					});
+
+					doc.autoTable({
+						startY: 35,
+						head: [['Cliente', 'Advogado', 'Descricao', 'Data', 'Valor']],
+						body: rowsC,
+						theme: 'grid',
+						headStyles: { fillColor: [96, 165, 250] }
+					});
+				}
+
+				doc.save(`Relatorio_Custas_${startDate.toISOString().split('T')[0]}.pdf`);
+				Utils.showToast('Relatorio de Custas gerado!', 'success');
+			}
+
 			exportDefaultersPDF() {
 				const startVal = document.getElementById('reportStartDate').value;
 				const endVal = document.getElementById('reportEndDate').value;
