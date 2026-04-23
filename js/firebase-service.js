@@ -92,6 +92,8 @@ export class FirebaseService {
 					console.error("Erro ao atualizar despesa:", error);
 					return false;
 				}
+			}
+
 			async updateOfficeExpenseField(expenseId, fieldData) {
 				try {
 					const expenseRef = doc(this.db, 'officeExpenses', expenseId);
@@ -158,6 +160,8 @@ export class FirebaseService {
 					console.error("Erro ao atualizar receita:", error);
 					return false;
 				}
+			}
+
 			async updateExtraRevenueField(revenueId, fieldData) {
 				try {
 					const revenueRef = doc(this.db, 'extraRevenues', revenueId);
