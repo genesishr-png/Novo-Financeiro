@@ -167,6 +167,7 @@ export class ReportHandler {
 		contracts.forEach(c => {
 			if (!c.parcels) return;
 			c.parcels.forEach(p => {
+				if (p.isDiligencia) return; // Diligências não são inadimplência
 				const dueDate = new Date(p.dueDate);
 				const hoje = new Date();
 				if (dueDate >= startMonth && dueDate <= endMonth && p.status === 'Pendente' && dueDate < hoje) {

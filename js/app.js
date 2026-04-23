@@ -3070,6 +3070,38 @@ class App {
 					headStyles: { fillColor: [79, 70, 229] }
 				});
 
+				// Tabela de Custas e Diligências
+				if (data.diligenciasPorContrato && data.diligenciasPorContrato.length > 0) {
+					const custasRows = [];
+					data.diligenciasPorContrato.forEach(c => {
+						c.custasEscritorio.forEach(d => {
+							custasRows.push([c.clientName, d.descricao, Utils.formatDate(d.data), 'Escritorio', Utils.formatCurrency(d.valor)]);
+						});
+						c.custasCliente.forEach(d => {
+							custasRows.push([c.clientName, d.descricao, Utils.formatDate(d.data), 'Cliente', Utils.formatCurrency(d.valor)]);
+						});
+					});
+
+					const prevY2 = doc.autoTable.previous.finalY;
+					const nextY2 = prevY2 + 15 > 270 ? (doc.addPage(), 22) : prevY2 + 15;
+					doc.setFontSize(16);
+					doc.text('Custas e Diligencias por Contrato', 14, nextY2 - 3);
+					doc.autoTable({
+						startY: nextY2 + 2,
+						head: [['Cliente', 'Descricao', 'Data', 'Pago por', 'Valor']],
+						body: custasRows,
+						theme: 'striped',
+						headStyles: { fillColor: [234, 88, 12] },
+						didParseCell: (hookData) => {
+							if (hookData.section === 'body' && hookData.column.index === 3) {
+								const isEscritorio = hookData.cell.raw === 'Escritorio';
+								hookData.cell.styles.textColor = isEscritorio ? [168, 85, 247] : [96, 165, 250];
+								hookData.cell.styles.fontStyle = 'bold';
+							}
+						}
+					});
+				}
+
 				doc.save(`Relatorio_FG_${startDate.toISOString().split('T')[0]}_a_${endDate.toISOString().split('T')[0]}.pdf`);
 			}
 
