@@ -2610,6 +2610,46 @@ class App {
 					defaultersHtml += '<p class="text-sm text-gray-500 mt-2">Nenhum atraso registado.</p>';
 				}
 
+				// [NOVO] HTML das Custas (Diligências)
+				let custasHtml = '';
+				if (income.diligenciasPorContrato && income.diligenciasPorContrato.length > 0) {
+					custasHtml += `
+						<h4 class="text-lg font-semibold mt-6 border-t border-gray-700 pt-4 text-orange-400">
+							<i class="fas fa-file-invoice mr-2"></i>Custas e Diligências
+						</h4>
+						<div class="grid grid-cols-2 gap-3 mt-3 mb-3">
+							<div class="dark-card p-3 rounded-lg border-l-4 border-purple-500 text-center">
+								<p class="text-xs text-gray-400 uppercase">Pagas pelo Escritório</p>
+								<p class="text-xl font-bold text-purple-400 mt-1">${Utils.formatCurrency(income.totalCustasEscritorio)}</p>
+								<p class="text-xs text-gray-500 mt-1">A reembolsar pelo cliente</p>
+							</div>
+							<div class="dark-card p-3 rounded-lg border-l-4 border-blue-500 text-center">
+								<p class="text-xs text-gray-400 uppercase">Pagas pelo Cliente</p>
+								<p class="text-xl font-bold text-blue-400 mt-1">${Utils.formatCurrency(income.totalCustasCliente)}</p>
+								<p class="text-xs text-gray-500 mt-1">Já quitadas pelo cliente</p>
+							</div>
+						</div>
+						<ul class="space-y-2 text-sm">`;
+					income.diligenciasPorContrato.forEach(c => {
+						custasHtml += `<li class="bg-gray-700/40 p-3 rounded-lg border border-gray-600">
+							<p class="font-bold text-white mb-2">${c.clientName} <span class="text-xs text-gray-400 font-normal">(${c.advogado})</span></p>`;
+						c.custasEscritorio.forEach(d => {
+							custasHtml += `<div class="flex justify-between items-center py-1 border-b border-gray-700/50">
+								<span class="text-gray-300 text-xs"><span class="text-purple-400 mr-1">🏢</span>${d.descricao} <span class="text-gray-500">(${Utils.formatDate(d.data)})</span></span>
+								<span class="text-purple-300 font-semibold text-xs">${Utils.formatCurrency(d.valor)}</span>
+							</div>`;
+						});
+						c.custasCliente.forEach(d => {
+							custasHtml += `<div class="flex justify-between items-center py-1 border-b border-gray-700/50">
+								<span class="text-gray-300 text-xs"><span class="text-blue-400 mr-1">👤</span>${d.descricao} <span class="text-gray-500">(${Utils.formatDate(d.data)})</span></span>
+								<span class="text-blue-300 font-semibold text-xs">${Utils.formatCurrency(d.valor)}</span>
+							</div>`;
+						});
+						custasHtml += `</li>`;
+					});
+					custasHtml += `</ul>`;
+				}
+
 				resultDiv.innerHTML = `
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="dark-card shadow-lg p-4 rounded-lg text-center">
@@ -2625,7 +2665,7 @@ class App {
                 <p class="text-white font-bold">TOTAL GERAL RECEBIDO</p>
                 <p class="text-3xl font-extrabold text-green-400">${Utils.formatCurrency(income.totalGeral)}</p>
             </div>
-        ` + detailsHtml + defaultersHtml;
+        ` + custasHtml + detailsHtml + defaultersHtml;
 			}
 
 			showAnalyticsInModal() {

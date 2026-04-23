@@ -10,7 +10,9 @@ export class ReportHandler {
 	// já vêm pré-filtrados pela classe App.
 	calculateIncomeByDateRange(startDate, endDate, contractsToRender) {
 		let totalParcelas = 0, totalExito = 0, totalVencido = 0;
+		let totalCustasEscritorio = 0, totalCustasCliente = 0;
 		const detailedPayments = [];
+		const diligenciasPorContrato = [];
 		const byAdvogado = {};
 		const byMonth = {};
 		const vencidoByMonth = {};
@@ -20,7 +22,6 @@ export class ReportHandler {
 		const allContracts = contractsToRender.filter(c => !c.isDeleted);
 
 		const addData = (map, date, value) => {
-			// Cria chave de mês (Ex: "2025-11")
 			const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 			map[monthKey] = (map[monthKey] || 0) + value;
 		};
@@ -28,45 +29,72 @@ export class ReportHandler {
 		allContracts.forEach(contract => {
 			const advogado = contract.advogadoResponsavel || 'Não Informado';
 
-			// 1. Novos Contratos (Baseado na Data de Criação)
+			// 1. Novos Contratos
 			if (contract.createdAt) {
 				const d = new Date(contract.createdAt);
 				if (d >= startDate && d <= endDate) addData(newContractsByMonth, d, 1);
 			}
 
 			// 2. Parcelas
+			const custasEscritorioContrato = [];
+			const custasClienteContrato = [];
+
 			(contract.parcels || []).forEach(parcel => {
-				// === RECEBIDO (O que entrou no caixa) ===
+				// === DILIGÊNCIAS: rastrear por quem pagou ===
+				if (parcel.isDiligencia) {
+					const d = new Date(parcel.dueDate);
+					if (d >= startDate && d <= endDate) {
+						const pagador = parcel.paidBy || 'Escritório';
+						const entry = {
+							descricao: parcel.description || 'Diligência',
+							valor: parcel.value,
+							data: d,
+							status: parcel.status,
+							pagador
+						};
+						if (pagador === 'Cliente') {
+							custasClienteContrato.push(entry);
+							totalCustasCliente += parcel.value;
+						} else {
+							custasEscritorioContrato.push(entry);
+							totalCustasEscritorio += parcel.value;
+						}
+					}
+					return; // diligências não entram no totalParcelas
+				}
+
+				// === RECEBIDO ===
 				if (parcel.status === 'Paga' && parcel.paymentDate) {
 					const d = new Date(parcel.paymentDate);
-					// Verifica se o PAGAMENTO foi dentro do mês
 					if (d >= startDate && d <= endDate) {
 						const value = parcel.valuePaid;
 						totalParcelas += value;
-						detailedPayments.push({ type: `Parcela ${parcel.number}/${contract.parcels.length}`, clientName: contract.clientName, date: d, value: value, advogado: advogado });
+						detailedPayments.push({ type: `Parcela ${parcel.number}/${contract.parcels.filter(p => !p.isDiligencia).length}`, clientName: contract.clientName, date: d, value: value, advogado: advogado });
 						byAdvogado[advogado] = (byAdvogado[advogado] || 0) + value;
 						addData(byMonth, d, value);
 					}
 				}
-				// === DÍVIDA / INADIMPLÊNCIA (O que devia ter entrado) ===
+				// === INADIMPLÊNCIA ===
 				else if (parcel.status === 'Pendente') {
 					const d = new Date(parcel.dueDate);
-
-					// AQUI ESTÁ O SEGREDO:
-					// 1. A data de vencimento (d) tem que ser MAIOR ou IGUAL ao inicio do relatorio
-					// 2. A data de vencimento (d) tem que ser MENOR ou IGUAL ao fim do relatorio
-					// 3. A data de vencimento (d) tem que ser MENOR que hoje (para ser atraso e não futuro)
 					if (d >= startDate && d <= endDate && d < new Date()) {
-						// Calcula o valor corrigido para ser justo
 						const valorAtualizado = this.app.correctionCalculator.calcularValorCorrigido(parcel.value, parcel.dueDate);
-
 						totalVencido += valorAtualizado;
 						addData(vencidoByMonth, d, valorAtualizado);
 					}
 				}
 			});
 
-			// 3. Êxito (Recebido)
+			if (custasEscritorioContrato.length > 0 || custasClienteContrato.length > 0) {
+				diligenciasPorContrato.push({
+					clientName: contract.clientName,
+					advogado,
+					custasEscritorio: custasEscritorioContrato,
+					custasCliente: custasClienteContrato
+				});
+			}
+
+			// 3. Êxito
 			if (contract.successFeePaymentDate) {
 				const d = new Date(contract.successFeePaymentDate);
 				if (d >= startDate && d <= endDate) {
@@ -83,7 +111,7 @@ export class ReportHandler {
 		let totalDespesas = 0;
 
 		if (this.app.isUserAdmin) {
-			// [NOVO] Integração de Receitas Avulsas
+			// Receitas Avulsas
 			const extraRevenues = (this.app.database.extraRevenues || []).filter(r => !r.isDeleted);
 			extraRevenues.forEach(rev => {
 				const d = new Date(rev.date + 'T12:00:00Z');
@@ -94,7 +122,7 @@ export class ReportHandler {
 				}
 			});
 
-			// [NOVO] Integração de Despesas do Escritório
+			// Despesas do Escritório
 			const officeExpenses = (this.app.database.officeExpenses || []).filter(e => !e.isDeleted);
 			officeExpenses.forEach(exp => {
 				if (exp.status === 'Paga' && exp.paymentDate) {
@@ -124,7 +152,10 @@ export class ReportHandler {
 			newContractsByMonth,
 			totalDespesas,
 			totalReceitasAvulsas,
-			saldoLiquido
+			saldoLiquido,
+			totalCustasEscritorio,
+			totalCustasCliente,
+			diligenciasPorContrato
 		};
 	}
 
