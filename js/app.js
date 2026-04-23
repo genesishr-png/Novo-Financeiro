@@ -2821,6 +2821,8 @@ class App {
 				document.getElementById('advancedReportContainer').classList.remove('hidden');
 				document.getElementById('advancedReportEmpty').classList.add('hidden');
 				document.getElementById('exportPdfButton').disabled = false;
+				const completePdfBtn = document.getElementById('exportCompletePdfButton');
+				if (completePdfBtn) completePdfBtn.disabled = false;
 
 				// 1. Renderiza KPIs
 				this.renderReportKPIs(data);
@@ -3111,7 +3113,218 @@ class App {
 				doc.save(`Relatorio_FG_${startDate.toISOString().split('T')[0]}_a_${endDate.toISOString().split('T')[0]}.pdf`);
 			}
 
-			// ================== COLE O CÓDIGO NOVO AQUI ==================
+			// ===== RELATÓRIO COMPLETO PDF =====
+			exportCompletePDF() {
+				if (!this.currentAdvancedReportData) {
+					Utils.showToast('Gere um relatório primeiro.', 'error');
+					return;
+				}
+
+				const data = this.currentAdvancedReportData;
+				const { jsPDF } = window.jspdf;
+				const doc = new jsPDF();
+				const startDate = new Date(document.getElementById('reportStartDate').value + 'T12:00:00Z');
+				const endDate = new Date(document.getElementById('reportEndDate').value + 'T12:00:00Z');
+				const hoje = Utils.formatDate(new Date());
+				const periodo = `${Utils.formatDate(startDate)} a ${Utils.formatDate(endDate)}`;
+
+				// ===== CAPA =====
+				doc.setFillColor(17, 24, 39);
+				doc.rect(0, 0, 210, 297, 'F');
+				doc.setFontSize(28);
+				doc.setTextColor(250, 204, 21); // amarelo
+				doc.text('RELATORIO FINANCEIRO', 105, 110, { align: 'center' });
+				doc.setFontSize(18);
+				doc.setTextColor(209, 213, 219);
+				doc.text('COMPLETO', 105, 124, { align: 'center' });
+				doc.setFontSize(12);
+				doc.setTextColor(156, 163, 175);
+				doc.text(`Periodo: ${periodo}`, 105, 145, { align: 'center' });
+				doc.text(`Gerado em: ${hoje}`, 105, 155, { align: 'center' });
+
+				// ===== PAG 2 - RESUMO FINANCEIRO =====
+				doc.addPage();
+				doc.setTextColor(0);
+				doc.setFontSize(18);
+				doc.text('1. Resumo Financeiro', 14, 22);
+				doc.setFontSize(10);
+				doc.setTextColor(100);
+				doc.text(`Periodo: ${periodo}`, 14, 30);
+				doc.autoTable({
+					startY: 35,
+					head: [['Metrica', 'Valor']],
+					body: [
+						['Total Receitas (Parcelas + Exito + Avulsas)', Utils.formatCurrency(data.totalGeral)],
+						['  Parcelas Pagas', Utils.formatCurrency(data.totalParcelas)],
+						['  Taxa de Exito', Utils.formatCurrency(data.totalExito)],
+						['  Receitas Avulsas', Utils.formatCurrency(data.totalReceitasAvulsas || 0)],
+						['Total Despesas do Escritorio', Utils.formatCurrency(data.totalDespesas || 0)],
+						['Custas Pagas pelo Escritorio (a reembolsar)', Utils.formatCurrency(data.totalCustasEscritorio || 0)],
+						['Custas Pagas pelo Cliente (ja quitadas)', Utils.formatCurrency(data.totalCustasCliente || 0)],
+						['Inadimplencia no Periodo', Utils.formatCurrency(data.totalVencido)],
+						['Saldo Liquido', Utils.formatCurrency(data.saldoLiquido)],
+						['Novos Contratos', data.totalContratos],
+					],
+					theme: 'grid',
+					headStyles: { fillColor: [79, 70, 229] },
+					didParseCell: (hook) => {
+						if (hook.section === 'body') {
+							const row = hook.row.index;
+							if (row === 8) { hook.cell.styles.fontStyle = 'bold'; hook.cell.styles.textColor = data.saldoLiquido >= 0 ? [22, 163, 74] : [220, 38, 38]; }
+							if (row === 4) { hook.cell.styles.textColor = [220, 38, 38]; }
+							if (row === 5) { hook.cell.styles.textColor = [168, 85, 247]; hook.cell.styles.fontStyle = 'bold'; }
+						}
+					}
+				});
+
+				// ===== PAG 3 - RECEBIMENTOS DETALHADOS =====
+				doc.addPage();
+				doc.setTextColor(0);
+				doc.setFontSize(18);
+				doc.text('2. Recebimentos Detalhados', 14, 22);
+				const recebimentos = data.detailedPayments.filter(p => p.value > 0);
+				const despesasLista = data.detailedPayments.filter(p => p.value < 0);
+				doc.autoTable({
+					startY: 28,
+					head: [['Cliente / Origem', 'Tipo', 'Data', 'Advogado', 'Valor']],
+					body: recebimentos.map(p => [p.clientName, p.type, Utils.formatDate(p.date), p.advogado, Utils.formatCurrency(p.value)]),
+					theme: 'striped',
+					headStyles: { fillColor: [22, 163, 74] }
+				});
+
+				// ===== DESPESAS DO ESCRITORIO =====
+				if (despesasLista.length > 0) {
+					const yD = doc.autoTable.previous.finalY + 12;
+					doc.setFontSize(14);
+					doc.setTextColor(220, 38, 38);
+					doc.text('2.1 Despesas do Escritorio', 14, yD);
+					doc.setTextColor(0);
+					doc.autoTable({
+						startY: yD + 5,
+						head: [['Descricao', 'Data', 'Valor']],
+						body: despesasLista.map(p => [p.clientName, Utils.formatDate(p.date), Utils.formatCurrency(Math.abs(p.value))]),
+						theme: 'striped',
+						headStyles: { fillColor: [220, 38, 38] }
+					});
+				}
+
+				// ===== REEMBOLSOS PENDENTES (CUSTAS PAGAS PELO ESCRITORIO) =====
+				if (data.totalCustasEscritorio > 0) {
+					doc.addPage();
+					doc.setFontSize(18);
+					doc.setTextColor(168, 85, 247); // roxo
+					doc.text('3. Reembolsos Pendentes do Escritorio', 14, 22);
+					doc.setFontSize(10);
+					doc.setTextColor(100);
+					doc.text(`Total a reembolsar: ${Utils.formatCurrency(data.totalCustasEscritorio)}`, 14, 30);
+					doc.text('Estas custas foram pagas pelo escritorio e devem ser reembolsadas pelo cliente ao fim do processo.', 14, 37);
+
+					const reembolsoRows = [];
+					(data.diligenciasPorContrato || []).forEach(c => {
+						c.custasEscritorio.forEach(d => {
+							reembolsoRows.push([c.clientName, c.advogado, d.descricao, Utils.formatDate(d.data), d.status || 'Pendente', Utils.formatCurrency(d.valor)]);
+						});
+					});
+					doc.setTextColor(0);
+					doc.autoTable({
+						startY: 44,
+						head: [['Cliente', 'Advogado', 'Descricao', 'Data', 'Status', 'Valor a Reembolsar']],
+						body: reembolsoRows,
+						theme: 'striped',
+						headStyles: { fillColor: [168, 85, 247] },
+						didParseCell: (hook) => {
+							if (hook.section === 'body' && hook.column.index === 4) {
+								hook.cell.styles.textColor = hook.cell.raw === 'Paga' ? [22, 163, 74] : [220, 38, 38];
+								hook.cell.styles.fontStyle = 'bold';
+							}
+							if (hook.section === 'body' && hook.column.index === 5) {
+								hook.cell.styles.textColor = [168, 85, 247];
+								hook.cell.styles.fontStyle = 'bold';
+							}
+						}
+					});
+				}
+
+				// ===== CUSTAS PAGAS PELO CLIENTE =====
+				if (data.totalCustasCliente > 0) {
+					const yC = doc.autoTable.previous.finalY + 12;
+					const needNewPage = yC > 240;
+					if (needNewPage) doc.addPage();
+					const startYC = needNewPage ? 22 : yC;
+					doc.setFontSize(14);
+					doc.setTextColor(96, 165, 250); // azul
+					doc.text('4. Custas Pagas pelo Cliente', 14, startYC);
+					doc.setTextColor(0);
+					const clienteRows = [];
+					(data.diligenciasPorContrato || []).forEach(c => {
+						c.custasCliente.forEach(d => {
+							clienteRows.push([c.clientName, c.advogado, d.descricao, Utils.formatDate(d.data), Utils.formatCurrency(d.valor)]);
+						});
+					});
+					doc.autoTable({
+						startY: startYC + 5,
+						head: [['Cliente', 'Advogado', 'Descricao', 'Data', 'Valor']],
+						body: clienteRows,
+						theme: 'striped',
+						headStyles: { fillColor: [96, 165, 250] }
+					});
+				}
+
+				// ===== INADIMPLENCIA =====
+				doc.addPage();
+				doc.setFontSize(18);
+				doc.setTextColor(220, 38, 38);
+				doc.text('5. Inadimplencia no Periodo', 14, 22);
+				doc.setFontSize(10);
+				doc.setTextColor(100);
+				doc.text(`Total em atraso: ${Utils.formatCurrency(data.totalVencido)}`, 14, 30);
+
+				const startD2 = new Date(document.getElementById('reportStartDate').value + 'T00:00:00');
+				const endD2 = new Date(document.getElementById('reportEndDate').value + 'T23:59:59');
+				const inadRows = [];
+				this.getFilteredContracts(true).forEach(c => {
+					(c.parcels || []).forEach(p => {
+						if (p.isDiligencia) return;
+						const d = new Date(p.dueDate);
+						if (d >= startD2 && d <= endD2 && p.status === 'Pendente' && d < new Date()) {
+							const corrigido = this.correctionCalculator.calcularValorCorrigido(p.value, p.dueDate);
+							inadRows.push([c.clientName, c.advogadoResponsavel || '-', `Parcela ${p.number}`, Utils.formatDate(d), Utils.formatCurrency(p.value), Utils.formatCurrency(corrigido)]);
+						}
+					});
+				});
+
+				doc.setTextColor(0);
+				if (inadRows.length === 0) {
+					doc.text('Nenhuma inadimplencia no periodo.', 14, 38);
+				} else {
+					doc.autoTable({
+						startY: 35,
+						head: [['Cliente', 'Advogado', 'Parcela', 'Vencimento', 'Valor Original', 'Valor Corrigido']],
+						body: inadRows,
+						theme: 'striped',
+						headStyles: { fillColor: [220, 38, 38] },
+						didParseCell: (hook) => {
+							if (hook.section === 'body' && hook.column.index === 5) {
+								hook.cell.styles.textColor = [220, 38, 38];
+								hook.cell.styles.fontStyle = 'bold';
+							}
+						}
+					});
+				}
+
+				// ===== RODAPE =====
+				const pageCount = doc.internal.getNumberOfPages();
+				for (let i = 1; i <= pageCount; i++) {
+					doc.setPage(i);
+					doc.setFontSize(8);
+					doc.setTextColor(150);
+					doc.text(`Pagina ${i} de ${pageCount}`, 105, 290, { align: 'center' });
+					if (i > 1) doc.text(`Periodo: ${periodo} | Gerado em: ${hoje}`, 14, 290);
+				}
+
+				doc.save(`Relatorio_Completo_${startDate.toISOString().split('T')[0]}_a_${endDate.toISOString().split('T')[0]}.pdf`);
+				Utils.showToast('Relatorio Completo gerado!', 'success');
+			}
 			exportDefaultersPDF() {
 				const startVal = document.getElementById('reportStartDate').value;
 				const endVal = document.getElementById('reportEndDate').value;
