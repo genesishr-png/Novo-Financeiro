@@ -2587,7 +2587,12 @@ class App {
 				if (income.detailedPayments.length > 0) {
 					detailsHtml += '<ul class="space-y-2 mt-2 text-sm">';
 					income.detailedPayments.forEach(p => {
-						detailsHtml += `<li class="flex justify-between items-center bg-gray-700/50 p-3 rounded-md"><div><p class="font-semibold text-white">${p.clientName}</p><p class="text-xs text-gray-400">${p.type} - ${Utils.formatDate(p.date)}</p></div><span class="font-semibold text-green-400 text-lg">${Utils.formatCurrency(p.value)}</span></li>`;
+						const isNegative = p.value < 0;
+						const valueColor = isNegative ? 'text-red-400' : 'text-green-400';
+						const statusBadge = isNegative
+							? '<span class="text-xs bg-red-500/20 text-red-400 border border-red-500/40 px-2 py-0.5 rounded-full ml-2">Despesa</span>'
+							: '<span class="text-xs bg-green-500/20 text-green-400 border border-green-500/40 px-2 py-0.5 rounded-full ml-2">Recebido</span>';
+						detailsHtml += `<li class="flex justify-between items-center bg-gray-700/50 p-3 rounded-md"><div><p class="font-semibold text-white">${p.clientName}${statusBadge}</p><p class="text-xs text-gray-400">${p.type} &mdash; ${Utils.formatDate(p.date)}</p></div><span class="font-semibold ${valueColor} text-lg">${Utils.formatCurrency(Math.abs(p.value))}</span></li>`;
 					});
 					detailsHtml += '</ul>';
 				} else {
@@ -2985,6 +2990,7 @@ class App {
 
 				allC.forEach(c => {
 					(c.parcels || []).forEach(p => {
+						if (p.isDiligencia) return; // Diligências não são inadimplência
 						const d = new Date(p.dueDate);
 						if (d >= startD && d <= endD && p.status === 'Pendente' && d < new Date()) {
 							periodDefaulters.push({ client: c.clientName, date: d, value: p.value, adv: c.advogadoResponsavel });
