@@ -241,8 +241,11 @@ class App {
 				// [MUDANÇA v5] Listener do PDF
 				const pdfBtn = document.getElementById('exportPdfButton');
 				if (pdfBtn) {
-
 					pdfBtn.addEventListener('click', () => this.exportReportPDF());
+				}
+				const completePdfBtn = document.getElementById('exportCompletePdfButton');
+				if (completePdfBtn) {
+					completePdfBtn.addEventListener('click', () => this.exportCompletePDF());
 				}
 
 				// [NOVO v5.6] Listeners para o modal de contrato
@@ -3194,7 +3197,8 @@ class App {
 
 				// ===== DESPESAS DO ESCRITORIO =====
 				if (despesasLista.length > 0) {
-					const yD = doc.autoTable.previous.finalY + 12;
+					const prevY = doc.autoTable.previous ? doc.autoTable.previous.finalY : 30;
+					const yD = prevY + 12;
 					doc.setFontSize(14);
 					doc.setTextColor(220, 38, 38);
 					doc.text('2.1 Despesas do Escritorio', 14, yD);
@@ -3247,7 +3251,8 @@ class App {
 
 				// ===== CUSTAS PAGAS PELO CLIENTE =====
 				if (data.totalCustasCliente > 0) {
-					const yC = doc.autoTable.previous.finalY + 12;
+					const prevY = doc.autoTable.previous ? doc.autoTable.previous.finalY : 30;
+					const yC = prevY + 12;
 					const needNewPage = yC > 240;
 					if (needNewPage) doc.addPage();
 					const startYC = needNewPage ? 22 : yC;
