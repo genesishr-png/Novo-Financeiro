@@ -455,7 +455,7 @@ export class DOMBuilder {
 
 			// [INÍCIO DA ALTERAÇÃO - OFICINA]
 			// Novo: Cria item da lista de Configurações (ex: Advogados)
-			createSettingListItem(name) {
+			createSettingListItem(name, type = 'advogado') {
 				const item = this.buildElement('div', { className: 'setting-list-item' });
 				item.innerHTML = `
 					<span class="font-medium">${Utils.sanitizeText(name)}</span>
@@ -463,7 +463,7 @@ export class DOMBuilder {
 				`;
 
 				item.querySelector('.setting-list-remove-btn').onclick = () => {
-					window.App.handleRemoveAdvogado(name);
+					if (type === 'categoria') window.App.handleRemoveCategoria(name); else window.App.handleRemoveAdvogado(name);
 				};
 				return item;
 			}

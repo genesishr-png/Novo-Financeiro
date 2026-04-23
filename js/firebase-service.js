@@ -92,6 +92,15 @@ export class FirebaseService {
 					console.error("Erro ao atualizar despesa:", error);
 					return false;
 				}
+			async updateOfficeExpenseField(expenseId, fieldData) {
+				try {
+					const expenseRef = doc(this.db, 'officeExpenses', expenseId);
+					await updateDoc(expenseRef, fieldData);
+					return true;
+				} catch (error) {
+					console.error("Erro ao atualizar campo da despesa:", error);
+					return false;
+				}
 			}
 
 			async deleteOfficeExpense(expenseId) {
@@ -147,6 +156,15 @@ export class FirebaseService {
 					return true;
 				} catch (error) {
 					console.error("Erro ao atualizar receita:", error);
+					return false;
+				}
+			async updateExtraRevenueField(revenueId, fieldData) {
+				try {
+					const revenueRef = doc(this.db, 'extraRevenues', revenueId);
+					await updateDoc(revenueRef, fieldData);
+					return true;
+				} catch (error) {
+					console.error("Erro ao atualizar campo da receita:", error);
 					return false;
 				}
 			}

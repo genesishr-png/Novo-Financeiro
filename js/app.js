@@ -140,6 +140,7 @@ class App {
 				// [INÍCIO DA ALTERAÇÃO - OFICINA]
 				// Formulário da Oficina
 				document.getElementById('formAddAdvogado').addEventListener('submit', this.handleAddAdvogado.bind(this));
+				document.getElementById('formAddCategoria')?.addEventListener('submit', this.handleAddCategoria.bind(this));
 				// [FIM DA ALTERAÇÃO - OFICINA]
 
 				// Botão de Adicionar Serviço
@@ -432,7 +433,7 @@ class App {
 
 			renderDespesas() {
 				const filter = document.getElementById('despesasMonthFilter').value; // 'YYYY-MM'
-				let expenses = [...(this.database.officeExpenses || [])];
+				let expenses = [...(this.database.officeExpenses || [])].filter(e => !e.isDeleted);
 				
 				if (filter) {
 					expenses = expenses.filter(e => e.dueDate.startsWith(filter));
@@ -489,8 +490,9 @@ class App {
 			}
 
 			async deleteDespesa(id) {
-				if (confirm('Tem certeza que deseja excluir esta despesa?')) {
-					await this.firebaseService.deleteOfficeExpense(id);
+				if (confirm('Tem certeza que deseja mover esta despesa para a lixeira?')) {
+					await this.firebaseService.updateOfficeExpenseField(id, { isDeleted: true });
+					Utils.showToast('Despesa movida para a lixeira.', 'success');
 				}
 			}
 
@@ -555,7 +557,7 @@ class App {
 			}
 
 			renderReceitasAvulsas() {
-				let revenues = [...(this.database.extraRevenues || [])];
+				let revenues = [...(this.database.extraRevenues || [])].filter(r => !r.isDeleted);
 				revenues.sort((a, b) => new Date(b.date) - new Date(a.date));
 
 				const tbody = document.getElementById('receitasAvulsasList');
@@ -593,8 +595,9 @@ class App {
 			}
 
 			async deleteReceita(id) {
-				if (confirm('Tem certeza que deseja excluir esta receita avulsa?')) {
-					await this.firebaseService.deleteExtraRevenue(id);
+				if (confirm('Tem certeza que deseja mover esta receita avulsa para a lixeira?')) {
+					await this.firebaseService.updateExtraRevenueField(id, { isDeleted: true });
+					Utils.showToast('Receita movida para a lixeira.', 'success');
 				}
 			}
 
@@ -622,12 +625,16 @@ class App {
 				if (!settings.advogados) {
 					settings.advogados = { list: [] };
 				}
+				if (!settings.categorias) {
+					settings.categorias = { list: [] };
+				}
 
 				this.database.settings = settings;
 
-				// Atualiza todos os componentes que dependem da lista de advogados
+				// Atualiza todos os componentes que dependem da lista de advogados e categorias
 				this.renderAdvogadoFilters();
 				this.populateAdvogadoSelectModal();
+				this.populateCategoriaSelectModal();
 
 				// Se a página da oficina estiver aberta, renderiza-a
 				if (this.currentPageId === 'page-oficina') {
@@ -938,44 +945,117 @@ class App {
 				container.append(fragment);
 			}
 
-			// [CORREÇÃO LIXEIRA] Esta é a lógica correta, baseada no v5.0 do usuário
+			// [CORREÇÃO LIXEIRA] Lógica atualizada para suportar Contexto (Cliente / Escritório)
 			renderLixeiraPage() {
-				// Pega TODOS os contratos, incluindo deletados
-				const contractsToRender = this.getFilteredContracts(true);
 				const container = document.getElementById('lixeiraListContainer');
 				container.innerHTML = '';
-
-				// Filtra APENAS os deletados
-				const deletedContracts = contractsToRender.filter(c => c.isDeleted === true);
-
-				if (deletedContracts.length === 0) {
-					container.innerHTML = `<div class="col-span-1 md:col-span-3 text-center py-10"><div class="inline-block dark-card shadow-lg text-gray-400 p-6 rounded-lg"><i class="fas fa-trash fa-3x mb-3"></i><p class="font-bold text-xl">Lixeira Vazia</p><p class="text-sm">Nenhum contrato foi excluído.</p></div></div>`;
-					return;
-				}
-
 				const fragment = document.createDocumentFragment();
-				deletedContracts.forEach(contract => {
-					const card = this.domBuilder.buildElement('div', { className: 'dark-card shadow-lg p-5 rounded-lg border-l-4 border-gray-600 transition-all duration-200 hover:-translate-y-1' });
-					card.append(this.domBuilder.buildElement('p', { className: 'font-bold text-lg text-white', text: contract.clientName }));
-					const services = (contract.serviceTypes || []).map(s => s.name).join(', ');
-					card.append(this.domBuilder.buildElement('p', { className: 'text-sm text-gray-400 mb-3', text: services }));
 
-					const footer = this.domBuilder.buildElement('div', { className: 'border-t border-gray-700 pt-3 mt-3 flex gap-2' });
+				if (this.viewMode === 'cliente') {
+					document.querySelector('#page-lixeira h2').textContent = 'Lixeira de Contratos';
+					document.querySelector('#page-lixeira p').textContent = 'Contratos excluídos são mantidos aqui. Pode restaurá-los ou excluí-los permanentemente (apenas admins).';
+					
+					const contractsToRender = this.getFilteredContracts(true);
+					const deletedContracts = contractsToRender.filter(c => c.isDeleted === true);
 
-					const restoreBtn = this.domBuilder.buildElement('button', { className: 'w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2', html: '<i class="fas fa-undo"></i> Restaurar' });
-					restoreBtn.onclick = () => this.restoreContract(contract.id);
-					footer.append(restoreBtn);
-
-					if (this.isUserAdmin) {
-						const deleteBtn = this.domBuilder.buildElement('button', { className: 'w-full bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2', html: '<i class="fas fa-times-circle"></i> Excluir Prmt.' });
-						deleteBtn.onclick = () => this.deleteContractPermanently(contract.id);
-						footer.append(deleteBtn);
+					if (deletedContracts.length === 0) {
+						container.innerHTML = `<div class="col-span-1 md:col-span-3 text-center py-10"><div class="inline-block dark-card shadow-lg text-gray-400 p-6 rounded-lg"><i class="fas fa-trash fa-3x mb-3"></i><p class="font-bold text-xl">Lixeira Vazia</p><p class="text-sm">Nenhum contrato foi excluído.</p></div></div>`;
+						return;
 					}
 
-					card.append(footer);
-					fragment.append(card);
-				});
+					deletedContracts.forEach(contract => {
+						const card = this.domBuilder.buildElement('div', { className: 'dark-card shadow-lg p-5 rounded-lg border-l-4 border-gray-600 transition-all duration-200 hover:-translate-y-1' });
+						card.append(this.domBuilder.buildElement('p', { className: 'font-bold text-lg text-white', text: contract.clientName }));
+						const services = (contract.serviceTypes || []).map(s => s.name).join(', ');
+						card.append(this.domBuilder.buildElement('p', { className: 'text-sm text-gray-400 mb-3', text: services }));
+
+						const footer = this.domBuilder.buildElement('div', { className: 'border-t border-gray-700 pt-3 mt-3 flex gap-2' });
+
+						const restoreBtn = this.domBuilder.buildElement('button', { className: 'w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2', html: '<i class="fas fa-undo"></i> Restaurar' });
+						restoreBtn.onclick = () => this.restoreContract(contract.id);
+						footer.append(restoreBtn);
+
+						if (this.isUserAdmin) {
+							const deleteBtn = this.domBuilder.buildElement('button', { className: 'w-full bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2', html: '<i class="fas fa-times-circle"></i> Excluir Prmt.' });
+							deleteBtn.onclick = () => this.deleteContractPermanently(contract.id);
+							footer.append(deleteBtn);
+						}
+
+						card.append(footer);
+						fragment.append(card);
+					});
+				} else {
+					document.querySelector('#page-lixeira h2').textContent = 'Lixeira do Escritório';
+					document.querySelector('#page-lixeira p').textContent = 'Despesas e Receitas Avulsas excluídas são mantidas aqui. Pode restaurá-las ou excluí-las permanentemente (apenas admins).';
+					
+					const deletedExpenses = (this.database.officeExpenses || []).filter(e => e.isDeleted === true);
+					const deletedRevenues = (this.database.extraRevenues || []).filter(r => r.isDeleted === true);
+					
+					const allDeleted = [
+						...deletedExpenses.map(e => ({...e, _type: 'Despesa'})),
+						...deletedRevenues.map(r => ({...r, _type: 'Receita'}))
+					];
+
+					if (allDeleted.length === 0) {
+						container.innerHTML = `<div class="col-span-1 md:col-span-3 text-center py-10"><div class="inline-block dark-card shadow-lg text-gray-400 p-6 rounded-lg"><i class="fas fa-trash fa-3x mb-3"></i><p class="font-bold text-xl">Lixeira Vazia</p><p class="text-sm">Nenhum registro foi excluído.</p></div></div>`;
+						return;
+					}
+
+					allDeleted.forEach(item => {
+						const isDespesa = item._type === 'Despesa';
+						const borderColor = isDespesa ? 'border-red-500' : 'border-green-500';
+						const icon = isDespesa ? '<i class="fas fa-arrow-down text-red-500 mr-2"></i>' : '<i class="fas fa-arrow-up text-green-500 mr-2"></i>';
+						
+						const card = this.domBuilder.buildElement('div', { className: `dark-card shadow-lg p-5 rounded-lg border-l-4 ${borderColor} transition-all duration-200 hover:-translate-y-1` });
+						card.append(this.domBuilder.buildElement('p', { className: 'font-bold text-lg text-white flex items-center', html: `${icon} ${item._type}` }));
+						card.append(this.domBuilder.buildElement('p', { className: 'text-sm text-gray-300 mb-1', text: isDespesa ? item.description : item.origin }));
+						card.append(this.domBuilder.buildElement('p', { className: 'text-sm text-gray-400 mb-3', html: `Valor: <span class="font-bold text-white">${Utils.formatCurrency(item.value)}</span>` }));
+
+						const footer = this.domBuilder.buildElement('div', { className: 'border-t border-gray-700 pt-3 mt-3 flex gap-2' });
+
+						const restoreBtn = this.domBuilder.buildElement('button', { className: 'w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2', html: '<i class="fas fa-undo"></i> Restaurar' });
+						restoreBtn.onclick = () => isDespesa ? this.restoreDespesa(item.id) : this.restoreReceita(item.id);
+						footer.append(restoreBtn);
+
+						if (this.isUserAdmin) {
+							const deleteBtn = this.domBuilder.buildElement('button', { className: 'w-full bg-gradient-to-r from-red-700 to-red-800 hover:from-red-800 hover:to-red-900 text-white font-semibold py-2 px-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2', html: '<i class="fas fa-times-circle"></i> Excluir Prmt.' });
+							deleteBtn.onclick = () => isDespesa ? this.permanentDeleteDespesa(item.id) : this.permanentDeleteReceita(item.id);
+							footer.append(deleteBtn);
+						}
+
+						card.append(footer);
+						fragment.append(card);
+					});
+				}
 				container.append(fragment);
+			}
+
+			async restoreDespesa(id) {
+				const ok = await Utils.confirm(`Tem certeza que deseja restaurar esta despesa?`);
+				if (!ok) return;
+				const success = await this.firebaseService.updateOfficeExpenseField(id, { isDeleted: false });
+				if (success) Utils.showToast('Despesa restaurada.', 'success');
+			}
+
+			async permanentDeleteDespesa(id) {
+				if (!this.isUserAdmin) return;
+				const ok = await Utils.confirm(`EXCLUSÃO PERMANENTE: Tem a certeza? Esta ação não pode ser desfeita.`);
+				if (!ok) return;
+				await this.firebaseService.deleteOfficeExpense(id);
+			}
+
+			async restoreReceita(id) {
+				const ok = await Utils.confirm(`Tem certeza que deseja restaurar esta receita avulsa?`);
+				if (!ok) return;
+				const success = await this.firebaseService.updateExtraRevenueField(id, { isDeleted: false });
+				if (success) Utils.showToast('Receita restaurada.', 'success');
+			}
+
+			async permanentDeleteReceita(id) {
+				if (!this.isUserAdmin) return;
+				const ok = await Utils.confirm(`EXCLUSÃO PERMANENTE: Tem a certeza? Esta ação não pode ser desfeita.`);
+				if (!ok) return;
+				await this.firebaseService.deleteExtraRevenue(id);
 			}
 			// [MUDANÇA v5] Nova Página de Relatórios
 			renderAdvancedReportPage() {
@@ -1044,22 +1124,38 @@ class App {
 			// Nova: Renderiza a página da Oficina
 			renderOficinaPage() {
 				const listContainer = document.getElementById('advogadoSettingsList');
-				if (!listContainer) return;
+				const categoriaContainer = document.getElementById('categoriaSettingsList');
+				
+				if (listContainer) {
+					listContainer.innerHTML = ''; // Limpa a lista antiga
+					const fragment = document.createDocumentFragment();
+					const advogadosList = this.database.settings.advogados?.list || [];
 
-				listContainer.innerHTML = ''; // Limpa a lista antiga
-				const fragment = document.createDocumentFragment();
-				const advogadosList = this.database.settings.advogados?.list || [];
-
-				if (advogadosList.length === 0) {
-					listContainer.innerHTML = `<p class="text-sm text-gray-400 text-center p-4">Nenhum advogado cadastrado.</p>`;
-					return;
+					if (advogadosList.length === 0) {
+						listContainer.innerHTML = `<p class="text-sm text-gray-400 text-center p-4">Nenhum advogado cadastrado.</p>`;
+					} else {
+						// Ordena alfabeticamente para exibição
+						[...advogadosList].sort().forEach(name => {
+							fragment.append(this.domBuilder.createSettingListItem(name, 'advogado'));
+						});
+						listContainer.append(fragment);
+					}
 				}
 
-				// Ordena alfabeticamente para exibição
-				[...advogadosList].sort().forEach(name => {
-					fragment.append(this.domBuilder.createSettingListItem(name));
-				});
-				listContainer.append(fragment);
+				if (categoriaContainer) {
+					categoriaContainer.innerHTML = '';
+					const fragmentCat = document.createDocumentFragment();
+					const categoriasList = this.database.settings.categorias?.list || [];
+
+					if (categoriasList.length === 0) {
+						categoriaContainer.innerHTML = `<p class="text-sm text-gray-400 text-center p-4">Nenhuma categoria cadastrada.</p>`;
+					} else {
+						[...categoriasList].sort().forEach(name => {
+							fragmentCat.append(this.domBuilder.createSettingListItem(name, 'categoria'));
+						});
+						categoriaContainer.append(fragmentCat);
+					}
+				}
 			}
 			// [FIM DA ALTERAÇÃO - OFICINA]
 
@@ -1281,6 +1377,27 @@ class App {
 
 				select.value = currentValue && currentValue !== 'Não Informado' ? currentValue : (this.isUserAdmin ? 'Não Informado' : this.currentUserDisplayName);
 				select.disabled = !this.isUserAdmin && !!this.currentUserDisplayName;
+			}
+
+			populateCategoriaSelectModal() {
+				const select = document.getElementById('despesaCategoria');
+				if (!select) return;
+				const currentValue = select.value;
+				select.innerHTML = '';
+				
+				const categorias = this.database.settings.categorias?.list || [];
+				if (categorias.length === 0) {
+					select.add(new Option("Nenhuma categoria (Adicione na Oficina)", ""));
+				} else {
+					select.add(new Option("Selecione uma categoria...", ""));
+					[...categorias].sort().forEach(cat => {
+						select.add(new Option(cat, cat));
+					});
+				}
+
+				if (currentValue && categorias.includes(currentValue)) {
+					select.value = currentValue;
+				}
 			}
 			// [FIM DA ALTERAÇÃO - OFICINA]
 
@@ -1799,6 +1916,44 @@ class App {
 
 				// O listener 'onSnapshot' (handleSystemSettingsUpdate)
 				// irá automaticamente re-renderizar a UI.
+			}
+
+			async handleAddCategoria(e) {
+				e.preventDefault();
+				if (!this.isUserAdmin) return;
+
+				const nameInput = document.getElementById('inputCategoriaName');
+				const newName = Utils.sanitizeText(nameInput.value);
+
+				if (!newName) {
+					Utils.showToast('Categoria não pode estar vazia.', 'error');
+					return;
+				}
+
+				const currentList = this.database.settings.categorias?.list || [];
+
+				if (currentList.map(name => name.toLowerCase()).includes(newName.toLowerCase())) {
+					Utils.showToast('Esta categoria já está na lista.', 'error');
+					return;
+				}
+
+				const updatedList = [...currentList, newName];
+				await this.firebaseService.saveSystemSettings('categorias', { list: updatedList });
+
+				nameInput.value = '';
+				Utils.showToast(`Categoria "${newName}" adicionada!`, 'success');
+			}
+
+			async handleRemoveCategoria(nameToRemove) {
+				if (!this.isUserAdmin) return;
+
+				const ok = await Utils.confirm(`Tem a certeza que deseja remover a categoria "${nameToRemove}"?`);
+				if (!ok) return;
+
+				const currentList = this.database.settings.categorias?.list || [];
+				const updatedList = currentList.filter(name => name !== nameToRemove);
+
+				await this.firebaseService.saveSystemSettings('categorias', { list: updatedList });
 			}
 			// [FIM DA ALTERAÇÃO - OFICINA]
 

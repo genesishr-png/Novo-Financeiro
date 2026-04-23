@@ -84,7 +84,7 @@ export class ReportHandler {
 
 		if (this.app.isUserAdmin) {
 			// [NOVO] Integração de Receitas Avulsas
-			const extraRevenues = this.app.database.extraRevenues || [];
+			const extraRevenues = (this.app.database.extraRevenues || []).filter(r => !r.isDeleted);
 			extraRevenues.forEach(rev => {
 				const d = new Date(rev.date + 'T12:00:00Z');
 				if (d >= startDate && d <= endDate) {
@@ -95,7 +95,7 @@ export class ReportHandler {
 			});
 
 			// [NOVO] Integração de Despesas do Escritório
-			const officeExpenses = this.app.database.officeExpenses || [];
+			const officeExpenses = (this.app.database.officeExpenses || []).filter(e => !e.isDeleted);
 			officeExpenses.forEach(exp => {
 				if (exp.status === 'Paga' && exp.paymentDate) {
 					const d = new Date(exp.paymentDate + 'T12:00:00Z');

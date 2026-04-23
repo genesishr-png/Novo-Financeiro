@@ -579,7 +579,24 @@
 							</div>
 						</div>
 
-						<div class... </div>
+						<div class="dark-card shadow-lg p-6 rounded-lg">
+							<h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+								<i class="fas fa-tags text-green-400"></i>
+								Gerenciador de Categorias
+							</h3>
+							<p class="text-sm text-gray-400 mb-4">
+								As categorias adicionadas aqui aparecerão automaticamente no formulário de despesas.
+							</p>
+
+							<form id="formAddCategoria" class="flex gap-2 mb-4">
+								<input type="text" id="inputCategoriaName" placeholder="Nova Categoria (Ex: Operacional)" class="form-input flex-1" required>
+								<button type="submit" class="form-button flex-shrink-0">
+									<i class="fas fa-plus"></i> Adicionar
+								</button>
+							</form>
+
+							<div class="space-y-2 max-h-80 overflow-y-auto" id="categoriaSettingsList">
+							</div>
 						</div>
 					</div>
 
@@ -927,11 +944,7 @@
 				<div>
 					<label for="despesaCategoria" class="block text-sm font-medium text-gray-400 mb-1">Categoria</label>
 					<select id="despesaCategoria" class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200" required>
-						<option value="Operacional">Operacional (Luz, Água, Net)</option>
-						<option value="Pessoal">Pessoal (Salários, Advogados)</option>
-						<option value="Marketing">Marketing / Publicidade</option>
-						<option value="Impostos">Impostos / Taxas</option>
-						<option value="Outros">Outros</option>
+						<option value="">Carregando categorias...</option>
 					</select>
 				</div>
 				<div class="grid grid-cols-2 gap-4">
