@@ -97,7 +97,7 @@
 			</div>
 
 			<nav class="flex-1 space-y-3">
-				<a onclick="window.App.showPage('page-dashboard')" id="tab-dashboard" class="sidebar-nav-item active">
+				<a onclick="window.App.showPage(window.App.viewMode === 'escritorio' ? 'page-escritorio' : 'page-dashboard')" id="tab-dashboard" class="sidebar-nav-item active">
 					<i class="fas fa-tachometer-alt w-5 text-center"></i>
 					<span>Painel Principal</span>
 				</a>
@@ -123,7 +123,7 @@
 					<i class="fas fa-chart-pie w-5 text-center"></i>
 					<span>Relatórios</span>
 				</a>
-				<a onclick="window.App.showPage('page-avulsas')" id="tab-avulsas" class="sidebar-nav-item">
+				<a onclick="window.App.showPage('page-avulsas')" id="tab-avulsas" class="sidebar-nav-item hidden">
 					<i class="fas fa-hand-holding-usd w-5 text-center"></i>
 					<span>Receitas Avulsas</span>
 				</a>

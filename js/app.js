@@ -325,16 +325,29 @@ class App {
 				this.viewMode = this.viewMode === 'cliente' ? 'escritorio' : 'cliente';
 				const label = document.getElementById('view-toggle-label');
 				
+				const clienteTabs = ['tab-parcelas', 'tab-servicos', 'tab-performance', 'tab-relatorios'];
+				const escritorioTabs = ['tab-avulsas'];
+				
 				if (this.viewMode === 'cliente') {
 					label.textContent = 'CLIENTE';
 					label.className = 'text-xs font-bold bg-indigo-600 px-2 py-0.5 rounded text-white';
-					if (this.currentPageId === 'page-escritorio' || this.currentPageId === 'page-dashboard') {
+					
+					// Mostrar abas do cliente, esconder as do escritório
+					clienteTabs.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'flex'; });
+					escritorioTabs.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+					
+					if (this.currentPageId === 'page-escritorio' || this.currentPageId === 'page-dashboard' || escritorioTabs.some(t => t.includes(this.currentPageId.split('-')[1]))) {
 						this.showPage('page-dashboard');
 					}
 				} else {
 					label.textContent = 'ESCRITÓRIO';
 					label.className = 'text-xs font-bold bg-red-600 px-2 py-0.5 rounded text-white';
-					if (this.currentPageId === 'page-escritorio' || this.currentPageId === 'page-dashboard') {
+					
+					// Esconder abas do cliente, mostrar as do escritório
+					clienteTabs.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+					escritorioTabs.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'flex'; });
+					
+					if (this.currentPageId === 'page-escritorio' || this.currentPageId === 'page-dashboard' || clienteTabs.some(t => t.includes(this.currentPageId.split('-')[1]))) {
 						this.showPage('page-escritorio');
 					}
 				}
@@ -1082,7 +1095,7 @@ class App {
 				document.getElementById('page-title').textContent = pageTitles[pageId] || 'Painel';
 
 				// Esconde todas as páginas
-				['page-dashboard', 'page-parcelas', 'page-servicos', 'page-lixeira', 'page-relatorios', 'page-performance', 'page-oficina'].forEach(id => {
+				['page-dashboard', 'page-parcelas', 'page-servicos', 'page-lixeira', 'page-relatorios', 'page-performance', 'page-oficina', 'page-escritorio', 'page-avulsas'].forEach(id => {
 					const el = document.getElementById(id);
 					if (el) el.classList.add('hidden');
 				});
@@ -1097,7 +1110,9 @@ class App {
 				if (targetPage) targetPage.classList.remove('hidden');
 
 				// Ativa a tab correspondente
-				const tabBaseId = pageId.split('-')[1];
+				let tabBaseId = pageId.split('-')[1];
+				if (tabBaseId === 'escritorio') tabBaseId = 'dashboard'; // Compartilha a aba "Painel Principal"
+				
 				const desktopTab = document.getElementById(`tab-${tabBaseId}`);
 				const mobileTab = document.getElementById(`mobile-tab-${tabBaseId}`);
 
