@@ -315,11 +315,6 @@
 							<input type="month" id="despesasMonthFilter" class="glass-select text-sm" style="color-scheme: dark;" onchange="window.App.renderDespesas()">
 						</div>
 						
-						<button id="launchFixedCostsBtn" onclick="window.App.launchFixedCostsForMonth()"
-							class="bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-300 font-bold py-2.5 px-5 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2">
-							<i class="fas fa-sync-alt"></i> Lançar Custas Fixas
-						</button>
-
 						<button onclick="window.App.openDespesaModal()"
 							class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-2.5 px-5 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2">
 							<i class="fas fa-plus-circle"></i> Nova Despesa
@@ -1057,11 +1052,19 @@
 						<input type="number" step="0.01" id="despesaValor" class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200" required>
 					</div>
 				</div>
-				<div class="p-3 bg-gray-900/50 rounded-lg border border-gray-700 mt-2">
-					<label class="flex items-center">
-						<input type="checkbox" id="despesaPaga" class="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-indigo-600">
-						<span class="ml-2 text-sm text-gray-300">Despesa já está paga?</span>
-					</label>
+				<div class="grid grid-cols-2 gap-4 mt-2">
+					<div class="p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+						<label class="flex items-center">
+							<input type="checkbox" id="despesaPaga" class="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-indigo-600">
+							<span class="ml-2 text-sm text-gray-300">Já está paga?</span>
+						</label>
+					</div>
+					<div class="p-3 bg-indigo-900/10 rounded-lg border border-indigo-700/30">
+						<label class="flex items-center">
+							<input type="checkbox" id="despesaFixa" class="form-checkbox h-4 w-4 bg-gray-700 border-gray-600 rounded text-indigo-600">
+							<span class="ml-2 text-sm text-indigo-300 font-semibold">Custa Fixa?</span>
+						</label>
+					</div>
 				</div>
 				<div id="divDespesaPagamento" class="hidden">
 					<label for="despesaDataPagamento" class="block text-sm font-medium text-gray-400 mb-1">Data do Pagamento</label>

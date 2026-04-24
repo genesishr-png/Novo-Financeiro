@@ -516,7 +516,7 @@ export class DOMBuilder {
 		`;
 
 		item.querySelector('.setting-list-remove-btn').onclick = () => {
-			window.App.handleRemoveCustaFixa(costObj.name);
+			window.App.handleRemoveCustaFixa(costObj.id);
 		};
 		return item;
 	}

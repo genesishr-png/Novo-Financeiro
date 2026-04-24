@@ -18,6 +18,7 @@ class App {
 					notifications: [], // [MUDANÇA v5]
 					officeExpenses: [], // [NOVO]
 					extraRevenues: [], // [FIX] Inicializado aqui para evitar crash
+					recurringExpenses: [], // [NOVO] Templates de despesas fixas
 					// [INÍCIO DA ALTERAÇÃO - OFICINA]
 					// Inicia com um objeto padrão para advogados.
 					// O listener do systemSettings irá preencher isso.
@@ -315,6 +316,7 @@ class App {
 						if (this.isUserAdmin) {
 							this.firebaseService.startOfficeExpensesListener();
 							this.firebaseService.startExtraRevenuesListener(); // [FIX] Listener de receitas
+							this.firebaseService.startRecurringExpensesListener(); // [NOVO]
 						}
 					}
 				} else {
@@ -333,6 +335,7 @@ class App {
 					// [INÍCIO DA ALTERAÇÃO - OFICINA]
 					this.firebaseService.stopSystemSettingsListener(); // Para o listener de configs
 					this.firebaseService.stopOfficeExpensesListener(); // [NOVO]
+					this.firebaseService.stopRecurringExpensesListener(); // [NOVO]
 					// [FIM DA ALTERAÇÃO - OFICINA]
 				}
 			}
@@ -420,6 +423,8 @@ class App {
 
 				const id = document.getElementById('despesaId').value;
 				const isPaga = document.getElementById('despesaPaga').checked;
+				const isFixa = document.getElementById('despesaFixa').checked;
+
 				const data = {
 					description: Utils.sanitizeText(document.getElementById('despesaDescricao').value),
 					category: document.getElementById('despesaCategoria').value,
@@ -427,11 +432,9 @@ class App {
 					value: Utils.parseNumber(document.getElementById('despesaValor').value),
 					status: isPaga ? 'Paga' : 'Pendente',
 					paymentDate: isPaga ? document.getElementById('despesaDataPagamento').value : null,
+					isFixed: isFixa,
 					updatedAt: new Date().toISOString()
 				};
-
-				console.log("App: Tentando salvar despesa...", data);
-				console.log("App: FirebaseService status:", this.firebaseService.db ? "DB Pronto" : "DB Nulo");
 
 				let success = false;
 				if (id) {
@@ -439,6 +442,18 @@ class App {
 				} else {
 					data.createdAt = new Date().toISOString();
 					success = await this.firebaseService.addOfficeExpense(data);
+					
+					// Se for fixa e ainda não existir nos templates, adiciona
+					if (isFixa) {
+						const exists = this.database.recurringExpenses.some(r => r.description.toLowerCase() === data.description.toLowerCase());
+						if (!exists) {
+							await this.firebaseService.addRecurringExpense({
+								description: data.description,
+								category: data.category,
+								defaultValue: data.value
+							});
+						}
+					}
 				}
 
 				if (success) this.closeModal('modalDespesa');
@@ -447,15 +462,43 @@ class App {
 				btn.disabled = false;
 			}
 
+			handleRecurringExpensesUpdate(recurring) {
+				this.database.recurringExpenses = recurring;
+				this.renderDespesas();
+			}
+
 			renderDespesas() {
 				const filter = document.getElementById('despesasMonthFilter').value; // 'YYYY-MM'
-				let expenses = [...(this.database.officeExpenses || [])].filter(e => !e.isDeleted);
+				if (!filter) return;
+
+				let realExpenses = [...(this.database.officeExpenses || [])].filter(e => !e.isDeleted);
+				realExpenses = realExpenses.filter(e => e.dueDate.startsWith(filter));
 				
-				if (filter) {
-					expenses = expenses.filter(e => e.dueDate.startsWith(filter));
-				}
+				// Pegar os templates recorrentes
+				const recurringTemplates = this.database.recurringExpenses || [];
 				
-				expenses.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+				// Criar lista final
+				let finalExpenses = [...realExpenses];
+
+				// Para cada template, ver se já tem um registro real nesse mês
+				recurringTemplates.forEach(template => {
+					const alreadyPaid = realExpenses.some(e => e.description.toLowerCase() === template.description.toLowerCase());
+					if (!alreadyPaid) {
+						// Adicionar item "Virtual" pendente
+						finalExpenses.push({
+							id: `rec-${template.id}`,
+							description: template.description,
+							category: template.category,
+							value: template.defaultValue || 0,
+							dueDate: `${filter}-05`, // Dia 5 como padrão
+							status: 'Pendente',
+							isVirtual: true,
+							isFixed: true
+						});
+					}
+				});
+
+				finalExpenses.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
 				const tbody = document.getElementById('despesasList');
 				const emptyState = document.getElementById('despesasEmptyState');
@@ -466,14 +509,14 @@ class App {
 
 				tbody.innerHTML = '';
 				
-				if (expenses.length === 0) {
+				if (finalExpenses.length === 0) {
 					table.classList.add('hidden');
 					emptyState.classList.remove('hidden');
 				} else {
 					table.classList.remove('hidden');
 					emptyState.classList.add('hidden');
 
-					expenses.forEach(exp => {
+					finalExpenses.forEach(exp => {
 						if (exp.status === 'Paga') {
 							totalPago += exp.value;
 						} else {
@@ -481,20 +524,35 @@ class App {
 						}
 
 						const tr = document.createElement('tr');
-						tr.className = "hover:bg-gray-800/50 transition-colors border-b border-gray-700/50";
+						tr.className = `hover:bg-gray-800/50 transition-colors border-b border-gray-700/50 ${exp.isVirtual ? 'bg-indigo-900/5' : ''}`;
 						
 						const statusColor = exp.status === 'Paga' ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10';
 						const dateObj = new Date(exp.dueDate + 'T12:00:00Z');
 						
+						const badgeFixa = exp.isFixed ? `<span class="ml-2 text-[10px] bg-indigo-600/20 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20"><i class="fas fa-sync-alt"></i> FIXA</span>` : '';
+
 						tr.innerHTML = `
-							<td class="p-3 text-white">${exp.description}</td>
+							<td class="p-3 text-white flex items-center">
+								${exp.description}
+								${badgeFixa}
+							</td>
 							<td class="p-3 text-gray-400 text-sm">${exp.category}</td>
 							<td class="p-3 text-gray-300">${dateObj.toLocaleDateString('pt-BR')}</td>
 							<td class="p-3 font-semibold text-gray-200">${Utils.formatCurrency(exp.value)}</td>
-							<td class="p-3"><span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">${exp.status}</span></td>
+							<td class="p-3">
+								<span class="px-2 py-1 rounded text-xs font-bold ${statusColor}">
+									${exp.isVirtual ? 'AGUARDANDO' : exp.status}
+								</span>
+							</td>
 							<td class="p-3 text-right">
-								<button onclick="window.App.openDespesaModal('${exp.id}')" class="text-indigo-400 hover:text-indigo-300 mr-3" title="Editar"><i class="fas fa-edit"></i></button>
-								<button onclick="window.App.deleteDespesa('${exp.id}')" class="text-red-400 hover:text-red-300" title="Excluir"><i class="fas fa-trash"></i></button>
+								${exp.isVirtual ? `
+									<button onclick="window.App.openVirtualRecurringModal('${exp.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-bold py-1 px-3 rounded shadow-lg transition-all" title="Lançar Pagamento">
+										LANÇAR PAGAMENTO
+									</button>
+								` : `
+									<button onclick="window.App.openDespesaModal('${exp.id}')" class="text-indigo-400 hover:text-indigo-300 mr-3" title="Editar"><i class="fas fa-edit"></i></button>
+									<button onclick="window.App.deleteDespesa('${exp.id}')" class="text-red-400 hover:text-red-300" title="Excluir"><i class="fas fa-trash"></i></button>
+								`}
 							</td>
 						`;
 						tbody.appendChild(tr);
@@ -503,6 +561,34 @@ class App {
 
 				document.getElementById('dash-escritorio-apagar').textContent = Utils.formatCurrency(totalApagar);
 				document.getElementById('dash-escritorio-pago').textContent = Utils.formatCurrency(totalPago);
+			}
+
+			openVirtualRecurringModal(virtualId) {
+				const templateId = virtualId.replace('rec-', '');
+				const template = this.database.recurringExpenses.find(t => t.id === templateId);
+				if (!template) return;
+
+				const title = document.getElementById('modalDespesaTitle');
+				const form = document.getElementById('formDespesa');
+				form.reset();
+				document.getElementById('despesaId').value = ''; // Novo registro
+				
+				title.textContent = `Pagar Custa Fixa: ${template.description}`;
+				document.getElementById('despesaDescricao').value = template.description;
+				document.getElementById('despesaCategoria').value = template.category;
+				document.getElementById('despesaValor').value = template.defaultValue || 0;
+				document.getElementById('despesaFixa').checked = true;
+				
+				// Define o vencimento como o mês atual (do filtro) no dia 05
+				const filter = document.getElementById('despesasMonthFilter').value;
+				document.getElementById('despesaVencimento').value = `${filter}-05`;
+
+				// Pré-seleciona "Paga" para facilitar
+				document.getElementById('despesaPaga').checked = true;
+				document.getElementById('divDespesaPagamento').classList.remove('hidden');
+				document.getElementById('despesaDataPagamento').value = new Date().toISOString().split('T')[0];
+
+				this.openModal('modalDespesa');
 			}
 
 			async deleteDespesa(id) {
@@ -1240,13 +1326,20 @@ class App {
 				if (fixedCostsContainer) {
 					fixedCostsContainer.innerHTML = '';
 					const fragmentFix = document.createDocumentFragment();
-					const fixedCostsList = this.database.settings.custasFixas?.list || [];
+					// Agora usa a coleção de recurringExpenses (templates)
+					const fixedCostsList = this.database.recurringExpenses || [];
 
 					if (fixedCostsList.length === 0) {
 						fixedCostsContainer.innerHTML = `<p class="text-sm text-gray-400 text-center p-4">Nenhuma custa fixa cadastrada.</p>`;
 					} else {
-						[...fixedCostsList].sort((a, b) => a.name.localeCompare(b.name)).forEach(cost => {
-							fragmentFix.append(this.domBuilder.createFixedCostListItem(cost));
+						[...fixedCostsList].sort((a, b) => a.description.localeCompare(b.description)).forEach(cost => {
+							// Adapta o objeto para o DOMBuilder (name -> description)
+							fragmentFix.append(this.domBuilder.createFixedCostListItem({
+								id: cost.id,
+								name: cost.description,
+								category: cost.category,
+								value: cost.defaultValue
+							}));
 						});
 						fixedCostsContainer.append(fragmentFix);
 					}
@@ -2067,99 +2160,47 @@ class App {
 				const catInput = document.getElementById('selectFixedCostCategory');
 
 				const newCost = {
-					name: Utils.sanitizeText(nameInput.value),
-					value: Utils.parseNumber(valueInput.value),
+					description: Utils.sanitizeText(nameInput.value),
+					defaultValue: Utils.parseNumber(valueInput.value),
 					category: catInput.value
 				};
 
-				if (!newCost.name || !newCost.category || newCost.value <= 0) {
+				if (!newCost.description || !newCost.category || newCost.defaultValue <= 0) {
 					Utils.showToast('Preencha todos os campos corretamente.', 'error');
 					return;
 				}
 
-				const currentList = this.database.settings.custasFixas?.list || [];
-				if (currentList.some(c => c.name.toLowerCase() === newCost.name.toLowerCase())) {
+				const currentList = this.database.recurringExpenses || [];
+				if (currentList.some(c => c.description.toLowerCase() === newCost.description.toLowerCase())) {
 					Utils.showToast('Já existe uma custa fixa com este nome.', 'error');
 					return;
 				}
 
-				const updatedList = [...currentList, newCost];
-				const success = await this.firebaseService.saveSystemSettings('custasFixas', { list: updatedList });
-
+				const success = await this.firebaseService.addRecurringExpense(newCost);
 				if (success) {
 					nameInput.value = '';
 					valueInput.value = '';
 					catInput.value = '';
+					Utils.showToast('Modelo de custa fixa salvo!', 'success');
 				}
 			}
 
-			async handleRemoveCustaFixa(nameToRemove) {
+			async handleRemoveCustaFixa(idToRemove) {
 				if (!this.isUserAdmin) return;
 
-				const ok = await Utils.confirm(`Remover custa fixa "${nameToRemove}"?`);
+				// Encontra o nome para exibir no confirm (o ID agora vem do DOMBuilder)
+				const item = this.database.recurringExpenses.find(r => r.id === idToRemove || r.description === idToRemove);
+				const name = item ? item.description : idToRemove;
+
+				const ok = await Utils.confirm(`Remover modelo de custa fixa "${name}"?`);
 				if (!ok) return;
 
-				const currentList = this.database.settings.custasFixas?.list || [];
-				const updatedList = currentList.filter(c => c.name !== nameToRemove);
-
-				await this.firebaseService.saveSystemSettings('custasFixas', { list: updatedList });
+				const targetId = item ? item.id : idToRemove;
+				await this.firebaseService.deleteRecurringExpense(targetId);
 			}
 
-			async launchFixedCostsForMonth() {
-				if (!this.isUserAdmin) return;
-				
-				const filterEl = document.getElementById('despesasMonthFilter');
-				const selectedMonth = filterEl.value; // format YYYY-MM
-				if (!selectedMonth) {
-					Utils.showToast('Selecione um mês de referência.', 'error');
-					return;
-				}
-
-				const templates = this.database.settings.custasFixas?.list || [];
-				if (templates.length === 0) {
-					Utils.showToast('Nenhuma custa fixa cadastrada na Oficina.', 'warning');
-					return;
-				}
-
-				const ok = await Utils.confirm(`Deseja lançar as ${templates.length} custas fixas para o mês ${selectedMonth}?`);
-				if (!ok) return;
-
-				// Evitar duplicidade: Checar se já existem despesas com o mesmo nome no mesmo mês
-				const existingExpenses = this.database.officeExpenses.filter(e => {
-					if (e.isDeleted) return false;
-					const d = new Date(e.dueDate);
-					const monthStr = d.toISOString().substring(0, 7);
-					return monthStr === selectedMonth;
-				});
-
-				const batchPromises = [];
-				let count = 0;
-
-				for (const template of templates) {
-					const exists = existingExpenses.some(e => e.description === template.name);
-					if (exists) continue;
-
-					const newExpense = {
-						description: template.name,
-						category: template.category,
-						value: template.value,
-						dueDate: `${selectedMonth}-05`, // Padrão dia 5
-						status: 'Pendente',
-						isFixed: true,
-						createdAt: new Date().toISOString()
-					};
-					batchPromises.push(this.firebaseService.addOfficeExpense(newExpense));
-					count++;
-				}
-
-				if (count === 0) {
-					Utils.showToast('As custas fixas já foram lançadas para este mês.', 'info');
-				} else {
-					await Promise.all(batchPromises);
-					Utils.showToast(`${count} custas fixas lançadas com sucesso.`, 'success');
-					this.renderDespesas();
-				}
-			}
+			// launchFixedCostsForMonth removido em favor do sistema automático virtual
+			
 			// [FIM DA ALTERAÇÃO - OFICINA]
 
 			// [INÍCIO DA ALTERAÇÃO - CONTRATO ESPECIAL]

@@ -62,6 +62,47 @@ export class FirebaseService {
 				}
 			}
 
+			startRecurringExpensesListener() {
+				if (this.recurringListenerUnsubscribe) {
+					this.recurringListenerUnsubscribe();
+				}
+				const recurringCollection = collection(this.db, 'recurringExpenses');
+				this.recurringListenerUnsubscribe = onSnapshot(recurringCollection, (snapshot) => {
+					const recurring = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+					this.app.handleRecurringExpensesUpdate(recurring);
+				}, (error) => {
+					console.error("Erro ao buscar recurringExpenses:", error);
+				});
+			}
+
+			stopRecurringExpensesListener() {
+				if (this.recurringListenerUnsubscribe) {
+					this.recurringListenerUnsubscribe();
+					this.recurringListenerUnsubscribe = null;
+				}
+			}
+
+			async addRecurringExpense(data) {
+				try {
+					const coll = collection(this.db, 'recurringExpenses');
+					await addDoc(coll, data);
+					return true;
+				} catch (error) {
+					console.error("Erro ao adicionar recurringExpense:", error);
+					return false;
+				}
+			}
+
+			async deleteRecurringExpense(id) {
+				try {
+					await deleteDoc(doc(this.db, 'recurringExpenses', id));
+					return true;
+				} catch (error) {
+					console.error("Erro ao excluir recurringExpense:", error);
+					return false;
+				}
+			}
+
 			async addOfficeExpense(expenseData) {
 				try {
 					if (!this.db) throw new Error("Banco de dados não inicializado.");
