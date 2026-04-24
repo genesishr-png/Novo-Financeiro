@@ -3646,7 +3646,7 @@ class App {
 					const item = this.domBuilder.buildElement('div', { className: 'bg-gray-800 border border-gray-700 p-3 rounded-xl flex items-center justify-between hover:border-indigo-500/50 transition-colors' });
 					
 					const isReimbursed = d.isReimbursed || false;
-					const paidByOffice = (d.paidBy === 'Escritório' || d.paidBy === 'Escritrio');
+					const paidByOffice = d.paidBy && (d.paidBy.toString().toLowerCase().includes('escritorio') || d.paidBy.toString().toLowerCase().includes('escritório'));
 					
 					let statusBadge = '';
 					if (paidByOffice) {

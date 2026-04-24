@@ -54,8 +54,9 @@ export class ReportHandler {
 					};
 
 					// 1. Custo para o Escritório (na data que foi pago/vencimento)
-					if (pagador === 'Escritório' || pagador === 'Escritrio') {
-						if (dDue >= startDate && dDue <= endDate) {
+					const isPaidByOffice = pagador && (pagador.toString().toLowerCase().includes('escritorio') || pagador.toString().toLowerCase().includes('escritório'));
+					
+					if (isPaidByOffice) {
 							totalCustasEscritorio += parcel.value;
 							custasEscritorioContrato.push(entry);
 						}

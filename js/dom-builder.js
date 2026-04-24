@@ -263,8 +263,10 @@ export class DOMBuilder {
 
 		const footer = this.buildElement('div', { className: 'mt-4 flex gap-2' });
 
+		const isPaidByOffice = paidBy && (paidBy.toString().toLowerCase().includes('escritorio') || paidBy.toString().toLowerCase().includes('escritório'));
+
 		// Botões de Ação
-		if (isDiligencia && (paidBy === 'Escritório' || paidBy === 'Escritrio')) {
+		if (isDiligencia && isPaidByOffice) {
 			const reimburseBtn = this.buildElement('button', {
 				className: `flex-1 ${isReimbursed ? 'bg-gray-700 hover:bg-gray-600' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-semibold py-2 px-3 rounded-lg shadow-lg transition-all text-xs flex items-center justify-center gap-2`,
 				html: `<i class="fas ${isReimbursed ? 'fa-undo' : 'fa-hand-holding-usd'}"></i> ${isReimbursed ? 'Estornar Reembolso' : 'Confirmar Reembolso'}`
