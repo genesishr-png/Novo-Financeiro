@@ -83,6 +83,7 @@ class App {
 				this._initDOMReferences();
 				this.setupEventListeners();
 				this._setupModalAccessibility();
+				this._setupMonthFilters();
 			}
 
 			// [MUDANÇA v5] Novo método para carregar referências DOM PÓS-DOMContentLoaded
@@ -1595,6 +1596,16 @@ class App {
 			}
 			// [FIM DA ALTERAÇÃO - OFICINA]
 
+			_setupMonthFilters() {
+				const hoje = new Date();
+				const monthStr = hoje.toISOString().substring(0, 7); // 'YYYY-MM'
+				
+				const despesaFilter = document.getElementById('despesasMonthFilter');
+				if (despesaFilter && !despesaFilter.value) {
+					despesaFilter.value = monthStr;
+				}
+			}
+
 			changeContractPage(pageIndex) {
 				this.contractListPage = pageIndex;
 				this.renderContractList();
@@ -1991,6 +2002,8 @@ class App {
 					(contract.parcels || []).forEach(parcel => {
 						// Se a parcela estava Pendente e venceu ONTEM
 						if (parcel.status === 'Pendente' && parcel.dueDate.startsWith(ontemStr)) {
+
+
 							console.log(`[Notificação Vencida] Enviando para: ${contract.advogadoResponsavel}`);
 							this.sendNotification(contract.advogadoResponsavel, {
 								message: `Atenção: A parcela ${parcel.number} (${Utils.formatCurrency(parcel.value)}) do contrato ${contract.clientName} venceu ontem.`,
