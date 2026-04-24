@@ -932,7 +932,6 @@ class App {
 				this.renderParcelasPage();
 			}
 
-			// [NOVO v5.9] Toggle de Status de Reembolso
 			async toggleReimbursementStatus(contractId, parcelIndex) {
 				const contract = this.database.contracts.find(c => c.id === contractId);
 				if (!contract || !contract.parcels[parcelIndex]) return;
@@ -940,20 +939,27 @@ class App {
 				const parcel = contract.parcels[parcelIndex];
 				parcel.isReimbursed = !parcel.isReimbursed;
 				
+				if (parcel.isReimbursed) {
+					parcel.reimbursementDate = new Date().toISOString();
+				} else {
+					delete parcel.reimbursementDate;
+				}
+				
 				try {
 					await this.updateContractInFirebase(contractId, { parcels: contract.parcels });
-					Utils.showToast(parcel.isReimbursed ? 'Marcado como reembolsado!' : 'Reembolso pendente.', 'success');
+					Utils.showToast(parcel.isReimbursed ? 'Confirmado Reembolso!' : 'Reembolso Estornado.', 'success');
 					this.renderParcelasPage();
 					
-					// Se o modal de contrato estiver aberto, atualiza a lista de diligências salvas
 					if (this.openModalId === 'modalContrato') {
 						this.renderSavedDiligenciasList(contract);
 					}
 				} catch (e) {
 					console.error(e);
-					Utils.showToast('Erro ao atualizar status de reembolso.', 'error');
+					Utils.showToast('Erro ao atualizar reembolso.', 'error');
 				}
 			}
+
+
 
 
 			
@@ -3618,51 +3624,7 @@ class App {
 			// ...
 			// Fim Mudança v5
 
-			// [NOVO v5.9] Toggle entre Parcelas e Diligências na página
-			setParcelasTypeFilter(type) {
-				this.currentParcelasTypeFilter = type;
-				
-				// Atualiza botões
-				const btnParc = document.getElementById('filter-type-parcelas');
-				const btnDilig = document.getElementById('filter-type-diligencias');
-				
-				if (type === 'parcelas') {
-					btnParc?.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
-					btnParc?.classList.remove('text-gray-400');
-					btnDilig?.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
-					btnDilig?.classList.add('text-gray-400');
-				} else {
-					btnDilig?.classList.add('bg-indigo-600', 'text-white', 'shadow-lg');
-					btnDilig?.classList.remove('text-gray-400');
-					btnParc?.classList.remove('bg-indigo-600', 'text-white', 'shadow-lg');
-					btnParc?.classList.add('text-gray-400');
-				}
-				
-				this.renderParcelasPage();
-			}
 
-			// [NOVO v5.9] Toggle de Status de Reembolso
-			async toggleReimbursementStatus(contractId, parcelIndex) {
-				const contract = this.database.contracts.find(c => c.id === contractId);
-				if (!contract || !contract.parcels[parcelIndex]) return;
-				
-				const parcel = contract.parcels[parcelIndex];
-				parcel.isReimbursed = !parcel.isReimbursed;
-				
-				try {
-					await this.updateContractInFirebase(contractId, { parcels: contract.parcels });
-					Utils.showToast(parcel.isReimbursed ? 'Marcado como reembolsado!' : 'Reembolso pendente.', 'success');
-					this.renderParcelasPage();
-					
-					// Se o modal de contrato estiver aberto, atualiza a lista de diligências salvas
-					if (this.openModalId === 'modalContrato') {
-						this.renderSavedDiligenciasList(contract);
-					}
-				} catch (e) {
-					console.error(e);
-					Utils.showToast('Erro ao atualizar status de reembolso.', 'error');
-				}
-			}
 
 			// [NOVO v5.9] Renderiza lista de diligências já persistidas no Firebase
 			renderSavedDiligenciasList(contract) {

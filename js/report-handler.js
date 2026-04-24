@@ -42,32 +42,48 @@ export class ReportHandler {
 			(contract.parcels || []).forEach(parcel => {
 				// === DILIGÊNCIAS: rastrear por quem pagou ===
 				if (parcel.isDiligencia) {
-					const d = new Date(parcel.dueDate);
-					if (d >= startDate && d <= endDate) {
-						const pagador = parcel.paidBy || 'Escritório';
-						const isReimbursed = parcel.isReimbursed || false;
-						
-						const entry = {
-							descricao: parcel.description || 'Diligência',
-							valor: parcel.value,
-							data: d,
-							status: parcel.status,
-							pagador,
-							isReimbursed
-						};
-						
-						if (pagador === 'Cliente') {
-							custasClienteContrato.push(entry);
-							totalCustasCliente += parcel.value;
-						} else {
+					const pagador = parcel.paidBy || 'Escritório';
+					const dDue = new Date(parcel.dueDate);
+					
+					const entry = {
+						descricao: parcel.description || 'Diligência',
+						valor: parcel.value,
+						data: dDue,
+						pagador,
+						isReimbursed: parcel.isReimbursed || false
+					};
+
+					// 1. Custo para o Escritório (na data que foi pago/vencimento)
+					if (pagador === 'Escritório' || pagador === 'Escritrio') {
+						if (dDue >= startDate && dDue <= endDate) {
+							totalCustasEscritorio += parcel.value;
 							custasEscritorioContrato.push(entry);
-							// Se o escritório pagou e ainda NÃO foi reembolsado, entra como custo no Saldo Líquido
-							if (!isReimbursed) {
-								totalCustasEscritorio += parcel.value;
+						}
+						
+						// 2. Reembolso (na data que o cliente pagou de volta)
+						if (parcel.isReimbursed && parcel.reimbursementDate) {
+							const dReim = new Date(parcel.reimbursementDate);
+							if (dReim >= startDate && dReim <= endDate) {
+								// Reembolso entra como uma Receita/Subtração de custo
+								detailedPayments.push({ 
+									type: 'Reembolso Diligência', 
+									clientName: contract.clientName, 
+									date: dReim, 
+									value: parcel.value, 
+									advogado: advogado 
+								});
+								totalExito += parcel.value; // Agrupa em receitas para o cálculo do totalGeral
+								addData(byMonth, dReim, parcel.value);
 							}
 						}
+					} else {
+						// Pago pelo cliente direto
+						if (dDue >= startDate && dDue <= endDate) {
+							totalCustasCliente += parcel.value;
+							custasClienteContrato.push(entry);
+						}
 					}
-					return; // diligências não entram no totalParcelas
+					return;
 				}
 
 				// === RECEBIDO ===
