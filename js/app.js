@@ -992,6 +992,8 @@ class App {
 					Utils.showToast('Erro ao atualizar status de reembolso.', 'error');
 				}
 			}
+			
+			renderServicosList() {
 				const contractsToRender = this.getFilteredContracts(false);
 				const container = document.getElementById('servicosListContainer');
 				const searchTerm = (document.getElementById('servicosSearchInput').value || '').toLowerCase();
