@@ -944,9 +944,8 @@ class App {
 				} else {
 					delete parcel.reimbursementDate;
 				}
-				
 				try {
-					await this.updateContractInFirebase(contractId, { parcels: contract.parcels });
+					await this.firebaseService.updateContract(contractId, { parcels: contract.parcels });
 					Utils.showToast(parcel.isReimbursed ? 'Confirmado Reembolso!' : 'Reembolso Estornado.', 'success');
 					this.renderParcelasPage();
 					
@@ -3681,7 +3680,7 @@ class App {
 				if (!contract) return;
 				contract.parcels.splice(realIndex, 1);
 				try {
-					await this.updateContractInFirebase(contractId, { parcels: contract.parcels });
+					await this.firebaseService.updateContract(contractId, { parcels: contract.parcels });
 					Utils.showToast('Diligência removida!', 'success');
 					this.renderSavedDiligenciasList(contract);
 					this.renderParcelasPage();
