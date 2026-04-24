@@ -85,19 +85,22 @@ export class DOMBuilder {
 	createExitoCard(contract) {
 		const taxaExitoDisplay = contract.successFee || '[Não definido]';
 
-		const card = this.buildElement('div', { className: 'dark-card shadow-lg p-4 rounded-lg transition-all duration-200 hover:-translate-y-1 border-l-4 border-indigo-500 w-80 flex-shrink-0 self-start' });
-		card.append(this.buildElement('p', { className: 'font-bold text-white', text: contract.clientName }));
+		const card = this.buildElement('div', { className: 'dark-card shadow-lg p-5 rounded-xl transition-all duration-200 hover:-translate-y-1 border-l-4 border-indigo-500 w-80 flex-shrink-0 flex flex-col' });
+		
+		const header = this.buildElement('div', { className: 'mb-4' });
+		header.append(this.buildElement('p', { className: 'font-bold text-white text-lg leading-tight', text: contract.clientName }));
 
 		const services = (contract.serviceTypes || []).map(s => s.name).join(', ');
-		card.append(this.buildElement('p', { className: 'text-sm text-gray-400 mb-3', text: services }));
+		header.append(this.buildElement('p', { className: 'text-xs text-gray-400 mt-1', text: services }));
+		card.append(header);
 
-		const infoDiv = this.buildElement('div', { className: 'my-4 text-center' });
-		infoDiv.append(this.buildElement('p', { className: 'text-sm text-gray-400', text: 'Bonificação Pendente' }));
-		infoDiv.append(this.buildElement('p', { className: 'text-2xl font-semibold text-indigo-400', text: taxaExitoDisplay }));
+		const infoDiv = this.buildElement('div', { className: 'flex-1 flex flex-col justify-center my-6 p-4 bg-gray-900/30 rounded-lg border border-gray-700/50' });
+		infoDiv.append(this.buildElement('p', { className: 'text-[10px] text-indigo-300 font-bold uppercase tracking-widest mb-2', text: 'Bonificação Pendente' }));
+		infoDiv.append(this.buildElement('p', { className: 'text-lg font-medium text-white leading-relaxed break-words', text: taxaExitoDisplay }));
 		card.append(infoDiv);
 
 		const button = this.buildElement('button', {
-			className: 'w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold py-2 px-3 rounded-lg text-sm shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2',
+			className: 'w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-3 px-4 rounded-xl text-sm shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-auto',
 			html: '<i class="fas fa-gavel"></i> Registar Recebimento'
 		});
 		button.onclick = () => window.App.openExitoModal(contract.id);
