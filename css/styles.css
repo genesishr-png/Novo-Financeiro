@@ -193,7 +193,9 @@
 		}
 
 		.dark-card {
-			background-color: #1f2937;
+			background-color: #1e293b; /* Slate 800 - Mais cinergico e moderno */
+			border: 1px solid rgba(255, 255, 255, 0.04);
+			box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
 		}
 
 		.sort-button,
