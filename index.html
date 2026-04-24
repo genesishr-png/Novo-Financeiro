@@ -11,8 +11,7 @@
 	<link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.min.css">
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-	<!-- [AI AGENT INTEGRATION] -->
-	<script src="js/ai_agent.js"></script>
+
 	<link rel="stylesheet" href="css/styles.css">
 
 </head>
@@ -385,7 +384,7 @@
 						<h2 class="text-2xl font-semibold text-white">Controlo de Produção de Serviços (Meus Contratos)
 						</h2>
 						<div class="flex flex-wrap items-center gap-4">
-							<select id="servicosAdvogadoFilter" onchange="window.App.renderServicosPage()"
+							<select id="servicosAdvogadoFilter" onchange="window.App.renderServicosList()"
 								class="filter-select admin-only focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50"></select>
 							<div class="flex items-center gap-2">
 								<span class="text-sm text-gray-400">Ordenar por:</span>
@@ -1182,7 +1181,7 @@
 
 	<script type="module" src="js/app.js"></script>
 
-	<script src="js/ai_agent.js"></script>
+
 </body>
 
 </html>

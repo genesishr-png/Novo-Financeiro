@@ -673,13 +673,15 @@ class App {
 				} else if (pageId === 'page-parcelas') { // [MUDANÇA v5.6]
 					this.renderParcelasPage(); // [MUDANÇA v5.6]
 				} else if (pageId === 'page-servicos') {
-					this.renderServicosPage();
+					this.renderServicosList();
 				} else if (pageId === 'page-lixeira') {
 					this.renderLixeiraPage();
 				} else if (pageId === 'page-relatorios') {
 					this.renderAdvancedReportPage();
 				} else if (pageId === 'page-performance') {
 					this.renderPerformancePage(); // [NOVO v5.5]
+				} else if (pageId === 'page-avulsas') {
+					this.renderReceitasAvulsas();
 				} else if (pageId === 'page-oficina') { // [INÍCIO DA ALTERAÇÃO - OFICINA]
 					this.renderOficinaPage();
 				} // [FIM DA ALTERAÇÃO - OFICINA]
@@ -3928,10 +3930,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				window.App = new App();
 				window.App.initialize();
 
-				// [AI AGENT INITIALIZATION]
-				if (window.aiAgent) {
-					window.aiAgent.init();
-				}
+
 			};
 			autoTableScript.onerror = () => {
 				document.getElementById('loading-overlay').textContent = "Erro ao carregar dependência (AutoTable).";
