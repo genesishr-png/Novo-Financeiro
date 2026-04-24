@@ -232,13 +232,15 @@ export class DOMBuilder {
 		// Info de Diligência (Pagador e Reembolso)
 		if (isDiligencia) {
 			const pagadorIcon = (paidBy === 'Cliente' || paidBy === '') ? '👤' : '🏢';
-			const reimbursedText = isReimbursed ? '✅ Reembolsado' : '❌ Não Reembolsado';
-			const reimbursedColor = isReimbursed ? 'text-green-400' : 'text-red-400';
+			const reimbursedText = isReimbursed ? '✓ REEMBOLSADO' : '⚠ PENDENTE REEMBOLSO';
+			const reimbursedClass = isReimbursed 
+				? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+				: 'bg-red-500/20 text-red-400 border border-red-500/30';
 
 			details.innerHTML += `
 					<div class="flex justify-between items-center text-xs mt-2 pt-2 border-t border-gray-800">
 						<span class="text-gray-500">Pagador: ${pagadorIcon} ${paidBy}</span>
-						${(paidBy === 'Escritório' || paidBy === 'Escritrio') ? `<span class="font-bold ${reimbursedColor}">${reimbursedText}</span>` : ''}
+						${(paidBy === 'Escritório' || paidBy === 'Escritrio') ? `<span class="px-2 py-0.5 rounded-full font-bold text-[10px] ${reimbursedClass}">${reimbursedText}</span>` : ''}
 					</div>`;
 		} else {
 			// Info de Atraso para parcelas normais
@@ -264,8 +266,8 @@ export class DOMBuilder {
 		// Botões de Ação
 		if (isDiligencia && (paidBy === 'Escritório' || paidBy === 'Escritrio')) {
 			const reimburseBtn = this.buildElement('button', {
-				className: `flex-1 ${isReimbursed ? 'bg-orange-600 hover:bg-orange-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-semibold py-2 px-3 rounded-lg shadow-lg transition-all text-xs flex items-center justify-center gap-2`,
-				html: `<i class="fas ${isReimbursed ? 'fa-undo' : 'fa-hand-holding-usd'}"></i> ${isReimbursed ? 'Estornar Reembolso' : 'Marcar Reembolsado'}`
+				className: `flex-1 ${isReimbursed ? 'bg-gray-700 hover:bg-gray-600' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-semibold py-2 px-3 rounded-lg shadow-lg transition-all text-xs flex items-center justify-center gap-2`,
+				html: `<i class="fas ${isReimbursed ? 'fa-undo' : 'fa-hand-holding-usd'}"></i> ${isReimbursed ? 'Estornar Reembolso' : 'Confirmar Reembolso'}`
 			});
 			reimburseBtn.onclick = () => window.App.toggleReimbursementStatus(contract.id, index);
 			footer.append(reimburseBtn);

@@ -3689,8 +3689,8 @@ class App {
 					let statusBadge = '';
 					if (paidByOffice) {
 						statusBadge = isReimbursed 
-							? '<span class="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-bold ml-2">REEMBOLSADO</span>'
-							: '<span class="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-bold ml-2">PENDENTE REEMBOLSO</span>';
+							? '<span class="text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-bold ml-2">✓ REEMBOLSADO</span>'
+							: '<span class="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-bold ml-2">⚠ PENDENTE REEMBOLSO</span>';
 					}
 
 					item.innerHTML = `
@@ -3700,8 +3700,8 @@ class App {
 						</div>
 						<div class="flex items-center gap-3">
 							${paidByOffice ? `
-								<button type="button" class="text-xs ${isReimbursed ? 'text-orange-400' : 'text-indigo-400'} hover:underline font-bold transition-all" onclick="window.App.toggleReimbursementStatus('${contract.id}', ${realIndex})">
-									${isReimbursed ? 'ESTORNAR' : 'MARCAR PAGO'}
+								<button type="button" class="px-3 py-1.5 rounded-lg text-xs ${isReimbursed ? 'bg-gray-700 text-gray-300' : 'bg-indigo-600 text-white shadow-lg'} font-bold transition-all hover:scale-105 active:scale-95" onclick="window.App.toggleReimbursementStatus('${contract.id}', ${realIndex})">
+									${isReimbursed ? 'ESTORNAR' : 'REEMBOLSADO'}
 								</button>
 							` : ''}
 							<button type="button" class="w-8 h-8 flex items-center justify-center bg-red-900/20 text-red-400 hover:bg-red-900/40 rounded-lg transition-all" onclick="window.App.removeSavedDiligencia('${contract.id}', ${realIndex})">
