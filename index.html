@@ -394,14 +394,14 @@
 							<input type="text" id="parcelasSearchInput" placeholder="Pesquisar por cliente..." class="search-input">
 						</div>
 
-						<div class="flex p-1 bg-gray-900/50 rounded-xl border border-gray-700/50">
+						<div class="segmented-toggle min-w-72">
 							<button id="filter-type-parcelas" onclick="window.App.setParcelasTypeFilter('parcelas')"
-								class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-indigo-600 text-white shadow-lg">
-								Parcelas
+								class="segmented-toggle-btn active">
+								<i class="fas fa-file-invoice"></i> Parcelas
 							</button>
 							<button id="filter-type-diligencias" onclick="window.App.setParcelasTypeFilter('diligencias')"
-								class="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-gray-400 hover:text-white hover:bg-gray-800">
-								Diligências
+								class="segmented-toggle-btn">
+								<i class="fas fa-gavel"></i> Diligências
 							</button>
 						</div>
 
