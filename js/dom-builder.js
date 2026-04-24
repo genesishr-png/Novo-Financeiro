@@ -85,18 +85,20 @@ export class DOMBuilder {
 	createExitoCard(contract) {
 		const taxaExitoDisplay = contract.successFee || '[Não definido]';
 
-		const card = this.buildElement('div', { className: 'dark-card shadow-lg p-5 rounded-xl transition-all duration-200 hover:-translate-y-1 border-l-4 border-indigo-500 w-80 flex-shrink-0 flex flex-col' });
+		// [MUDANÇA] Altura fixa de 400px para padronização total
+		const card = this.buildElement('div', { className: 'dark-card shadow-lg p-5 rounded-xl transition-all duration-200 hover:-translate-y-1 border-l-4 border-indigo-500 w-80 h-[400px] flex-shrink-0 flex flex-col' });
 		
-		const header = this.buildElement('div', { className: 'mb-4' });
-		header.append(this.buildElement('p', { className: 'font-bold text-white text-lg leading-tight', text: contract.clientName }));
+		const header = this.buildElement('div', { className: 'mb-4 h-16 overflow-hidden' });
+		header.append(this.buildElement('p', { className: 'font-bold text-white text-lg leading-tight line-clamp-2', text: contract.clientName }));
 
 		const services = (contract.serviceTypes || []).map(s => s.name).join(', ');
-		header.append(this.buildElement('p', { className: 'text-xs text-gray-400 mt-1', text: services }));
+		header.append(this.buildElement('p', { className: 'text-[11px] text-gray-400 mt-1 truncate', text: services }));
 		card.append(header);
 
-		const infoDiv = this.buildElement('div', { className: 'flex-1 flex flex-col justify-center my-6 p-4 bg-gray-900/30 rounded-lg border border-gray-700/50' });
-		infoDiv.append(this.buildElement('p', { className: 'text-[10px] text-indigo-300 font-bold uppercase tracking-widest mb-2', text: 'Bonificação Pendente' }));
-		infoDiv.append(this.buildElement('p', { className: 'text-lg font-medium text-white leading-relaxed break-words', text: taxaExitoDisplay }));
+		// [MUDANÇA] Área de texto com altura fixa e line-clamp para harmonia visual
+		const infoDiv = this.buildElement('div', { className: 'flex-1 flex flex-col justify-start my-4 p-4 bg-gray-900/30 rounded-lg border border-gray-700/50 overflow-hidden' });
+		infoDiv.append(this.buildElement('p', { className: 'text-[10px] text-indigo-300 font-bold uppercase tracking-widest mb-2 flex-shrink-0', text: 'Bonificação Pendente' }));
+		infoDiv.append(this.buildElement('p', { className: 'text-sm font-medium text-white leading-relaxed line-clamp-6', text: taxaExitoDisplay }));
 		card.append(infoDiv);
 
 		const button = this.buildElement('button', {
