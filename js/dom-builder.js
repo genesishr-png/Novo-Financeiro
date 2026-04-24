@@ -29,7 +29,7 @@ export class DOMBuilder {
 		const formattedCorrigido = valorCorrigido ? Utils.formatCurrency(valorCorrigido) : '';
 
 		let borderColor = '';
-		const card = this.buildElement('div', { className: 'dark-card shadow-lg p-4 rounded-lg transition-all duration-200 hover:-translate-y-1' });
+		const card = this.buildElement('div', { className: 'dark-card shadow-lg p-4 rounded-xl transition-all duration-200 hover:-translate-y-1' });
 
 		const title = this.buildElement('p', { className: 'font-bold text-white', text: contract.clientName });
 		const services = (contract.serviceTypes || []).map(s => s.name).join(', ');
@@ -56,7 +56,7 @@ export class DOMBuilder {
 				text: `Pago ${formattedPaidValue} em ${paymentDate}`
 			});
 		}
-		card.classList.add('border-l-4', borderColor);
+		// Removida a borda lateral
 
 		const vencimentoDiv = this.buildElement('div', { className: 'flex items-center text-gray-400' });
 		vencimentoDiv.append(this.buildIcon('fas fa-calendar-alt w-5 text-center mr-2 text-gray-500'));
@@ -85,8 +85,8 @@ export class DOMBuilder {
 	createExitoCard(contract) {
 		const taxaExitoDisplay = contract.successFee || '[Não definido]';
 
-		// [MUDANÇA] Altura fixa de 400px para padronização total
-		const card = this.buildElement('div', { className: 'dark-card shadow-lg p-5 rounded-xl transition-all duration-200 hover:-translate-y-1 border-l-4 border-indigo-500 w-80 h-[400px] flex-shrink-0 flex flex-col' });
+		// [MUDANÇA] Altura fixa de 400px para padronização total - Borda lateral removida
+		const card = this.buildElement('div', { className: 'dark-card shadow-lg p-5 rounded-xl transition-all duration-200 hover:-translate-y-1 w-80 h-[400px] flex-shrink-0 flex flex-col' });
 		
 		const header = this.buildElement('div', { className: 'mb-4 h-16 overflow-hidden' });
 		header.append(this.buildElement('p', { className: 'font-bold text-white text-lg leading-tight line-clamp-2', text: contract.clientName }));
@@ -114,7 +114,7 @@ export class DOMBuilder {
 	createContractCard(contract, statusInfo) {
 		const { statusText, statusColor, borderColor } = statusInfo;
 
-		const card = this.buildElement('div', { className: `dark-card shadow-lg rounded-lg overflow-hidden ${borderColor} flex flex-col justify-between transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl border-l-4` });
+		const card = this.buildElement('div', { className: `dark-card shadow-lg rounded-xl overflow-hidden ${borderColor.replace('border-l-', 'border-')} flex flex-col justify-between transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl` });
 		const cardBody = this.buildElement('div', { className: 'p-5' });
 
 		const header = this.buildElement('div', { className: 'flex justify-between items-start mb-3' });
@@ -185,14 +185,14 @@ export class DOMBuilder {
 
 		// [MUDANÇA v5.9] Cores e classes dinâmicas
 		let cardClasses = isVencida ? 'parcel-card-vencida' : 'parcel-card-avencer';
-		let borderLeftColor = isVencida ? 'border-l-red-500' : 'border-l-yellow-500';
+		let borderLeftColor = ''; // Removida borda lateral
 
 		if (isDiligencia) {
 			cardClasses = 'border-indigo-500/30 bg-indigo-900/10';
-			borderLeftColor = 'border-l-indigo-500';
+			borderLeftColor = '';
 		}
 
-		const card = this.buildElement('div', { className: `dark-card shadow-lg p-5 rounded-lg border-l-4 ${borderLeftColor} ${cardClasses} transition-all duration-200 hover:-translate-y-1 hover:shadow-xl` });
+		const card = this.buildElement('div', { className: `dark-card shadow-lg p-5 rounded-xl ${cardClasses} transition-all duration-200 hover:-translate-y-1 hover:shadow-xl` });
 
 		const header = this.buildElement('div', { className: 'flex justify-between items-start mb-1' });
 		header.append(this.buildElement('p', { className: 'font-bold text-lg text-white', text: contract.clientName }));
