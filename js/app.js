@@ -2911,12 +2911,16 @@ class App {
 
 			renderReportKPIs(data) {
 				const container = document.getElementById('report-kpis');
-				// Grid ajustado para 5 colunas para caber o novo card
-				container.className = "grid grid-cols-1 md:grid-cols-5 gap-4";
+				// Grid ajustado para 6 colunas para incluir Reembolsos
+				container.className = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4";
 				container.innerHTML = `
 					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 border-green-500">
-						<h3 class="text-xs font-semibold text-gray-400 uppercase" title="Parcelas + Êxitos + Avulsas">Total Receitas</h3>
+						<h3 class="text-xs font-semibold text-gray-400 uppercase" title="Parcelas + Êxitos + Avulsas">Receitas Brutas</h3>
 						<p class="text-2xl font-bold text-green-400 mt-1">${Utils.formatCurrency(data.totalGeral)}</p>
+					</div>
+					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 border-purple-500">
+						<h3 class="text-xs font-semibold text-gray-400 uppercase">Reembolsos</h3>
+						<p class="text-xl font-bold text-purple-400 mt-1">${Utils.formatCurrency(data.totalReembolsos || 0)}</p>
 					</div>
 					<div class="dark-card p-4 rounded-lg shadow-lg text-center border-l-4 border-red-500">
 						<h3 class="text-xs font-semibold text-gray-400 uppercase">Total Despesas</h3>

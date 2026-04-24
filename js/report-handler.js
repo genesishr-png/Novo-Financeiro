@@ -9,7 +9,7 @@ export class ReportHandler {
 	// Removida a verificação 'isUserAdmin', pois os 'contractsToRender'
 	// já vêm pré-filtrados pela classe App.
 	calculateIncomeByDateRange(startDate, endDate, contractsToRender) {
-		let totalParcelas = 0, totalExito = 0, totalVencido = 0;
+		let totalParcelas = 0, totalExito = 0, totalVencido = 0, totalReembolsos = 0;
 		let totalCustasEscritorio = 0, totalCustasCliente = 0;
 		const detailedPayments = [];
 		const diligenciasPorContrato = [];
@@ -74,6 +74,7 @@ export class ReportHandler {
 									value: parcel.value, 
 									advogado: advogado 
 								});
+								totalReembolsos += parcel.value;
 								totalExito += parcel.value; // Agrupa em receitas para o cálculo do totalGeral
 								addData(byMonth, dReim, parcel.value);
 							}
@@ -170,6 +171,7 @@ export class ReportHandler {
 			totalGeral,
 			totalContratos,
 			totalVencido,
+			totalReembolsos,
 			detailedPayments,
 			byAdvogado,
 			byMonth,
