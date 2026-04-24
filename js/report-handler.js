@@ -57,6 +57,7 @@ export class ReportHandler {
 					const isPaidByOffice = pagador && (pagador.toString().toLowerCase().includes('escritorio') || pagador.toString().toLowerCase().includes('escritório'));
 					
 					if (isPaidByOffice) {
+						if (dDue >= startDate && dDue <= endDate) {
 							totalCustasEscritorio += parcel.value;
 							custasEscritorioContrato.push(entry);
 						}
