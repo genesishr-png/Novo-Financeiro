@@ -161,7 +161,21 @@
 				<div class="flex justify-between items-center">
 					<h1 id="page-title" class="text-2xl md:text-3xl font-bold text-white">Painel Principal</h1>
 
-					<div class="flex items-center gap-4">
+					<div class="flex items-center gap-3">
+						<!-- Toggle de Visão -->
+						<button id="view-toggle-button"
+							class="admin-only flex items-center p-1.5 md:p-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-all duration-200"
+							title="Alternar Visão: Financeiro Cliente / Financeiro Escritório">
+							<i class="fas fa-exchange-alt mr-2"></i>
+							<span id="view-toggle-label" class="text-xs font-bold bg-indigo-600 px-2 py-0.5 rounded text-white">CLIENTE</span>
+						</button>
+
+						<!-- Menu Mobile -->
+						<button id="mobile-menu-toggle" class="md:hidden p-2 text-gray-300 hover:text-white">
+							<i class="fas fa-bars text-xl"></i>
+						</button>
+
+						<!-- Sino de Notificação (Na ponta como você gostou) -->
 						<div class="relative">
 							<button id="notification-bell" class="relative p-2 text-gray-300 hover:text-white transition-colors">
 								<i class="fas fa-bell text-xl"></i>
@@ -184,16 +198,6 @@
 									</div>
 								</div>
 							</div>
-
-							<button id="view-toggle-button"
-								class="admin-only flex items-center p-1.5 md:p-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-all duration-200 ml-2"
-								title="Alternar Visão: Financeiro Cliente / Financeiro Escritório">
-								<i class="fas fa-exchange-alt mr-2"></i>
-								<span id="view-toggle-label" class="text-xs font-bold bg-indigo-600 px-2 py-0.5 rounded text-white">CLIENTE</span>
-							</button>
-							<button id="mobile-menu-toggle" class="md:hidden p-2 text-gray-300 hover:text-white">
-								<i class="fas fa-bars text-xl"></i>
-							</button>
 						</div>
 					</div>
 			</header>
