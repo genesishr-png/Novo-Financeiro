@@ -91,8 +91,24 @@ export const Utils = {
 				return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
 			},
 			parseNumber(n) {
-				const v = Number(n);
+				if (n == null || n === '') return 0;
+				if (typeof n === 'number') return n;
+				// Remove R$, espaços, pontos de milhar e troca vírgula por ponto
+				const clean = n.replace(/[R$\s.]/g, '').replace(',', '.');
+				const v = parseFloat(clean);
 				return Number.isFinite(v) ? v : 0;
+			},
+			applyCurrencyMask(e) {
+				let value = e.target.value.replace(/\D/g, "");
+				if (!value) {
+					e.target.value = "";
+					return;
+				}
+				value = (Number(value) / 100).toLocaleString('pt-BR', {
+					minimumFractionDigits: 2,
+					maximumFractionDigits: 2
+				});
+				e.target.value = "R$ " + value;
 			},
 			confirm(message) {
 				return new Promise((resolve) => {

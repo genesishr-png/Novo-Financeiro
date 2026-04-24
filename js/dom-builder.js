@@ -231,16 +231,18 @@ export class DOMBuilder {
 
 		// Info de Diligência (Pagador e Reembolso)
 		if (isDiligencia) {
-			const pagadorIcon = (paidBy === 'Cliente' || paidBy === '') ? '👤' : '🏢';
-			const reimbursedText = isReimbursed ? '✓ REEMBOLSADO' : '⚠ PENDENTE REEMBOLSO';
+			const pagadorIcon = (paidBy === 'Cliente' || paidBy === '') ? '<i class="fas fa-user-tie"></i>' : '<i class="fas fa-building"></i>';
+			const reimbursedText = isReimbursed ? '<i class="fas fa-check"></i> REEMBOLSADO' : '<i class="fas fa-exclamation-triangle"></i> REEMBOLSO PENDENTE';
 			const reimbursedClass = isReimbursed 
 				? 'bg-green-500/20 text-green-400 border border-green-500/30' 
 				: 'bg-red-500/20 text-red-400 border border-red-500/30';
 
 			details.innerHTML += `
-					<div class="flex justify-between items-center text-xs mt-2 pt-2 border-t border-gray-800">
-						<span class="text-gray-500">Pagador: ${pagadorIcon} ${paidBy}</span>
-						${(paidBy === 'Escritório' || paidBy === 'Escritrio') ? `<span class="px-2 py-0.5 rounded-full font-bold text-[10px] ${reimbursedClass}">${reimbursedText}</span>` : ''}
+					<div class="flex flex-col gap-1 text-xs mt-2 pt-2 border-t border-gray-800">
+						<div class="flex justify-between items-center">
+							<span class="text-gray-500">Pagador: ${pagadorIcon} ${paidBy}</span>
+							${(paidBy === 'Escritório' || paidBy === 'Escritrio') ? `<span class="px-2 py-0.5 rounded-full font-bold text-[10px] ${reimbursedClass}">${reimbursedText}</span>` : ''}
+						</div>
 					</div>`;
 		} else {
 			// Info de Atraso para parcelas normais

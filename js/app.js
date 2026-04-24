@@ -84,6 +84,7 @@ class App {
 				this.setupEventListeners();
 				this._setupModalAccessibility();
 				this._setupMonthFilters();
+				this._setupCurrencyMasks();
 			}
 
 			// [MUDANÇA v5] Novo método para carregar referências DOM PÓS-DOMContentLoaded
@@ -265,10 +266,24 @@ class App {
 				const financialInputs = ['valorTotal', 'numParcelas', 'vencimentoPrimeiraParcela', 'contratoJaQuitado'];
 				financialInputs.forEach(id => {
 					document.getElementById(id)?.addEventListener('change', () => {
-						document.getElementById('financialDataChanged').value = 'true';
+						const el = document.getElementById('financialDataChanged');
+						if (el) el.value = 'true';
 					});
 				});
 
+				this._setupCurrencyMasks();
+			}
+
+			_setupCurrencyMasks() {
+				const fields = [
+					'valorTotal', 'parcelaValorManual', 'pagamentoValor', 
+					'exitoValorRecebido', 'despesaValor', 'receitaValor',
+					'contratoDiligenciaValor', 'inputFixedCostValue'
+				];
+				fields.forEach(id => {
+					const el = document.getElementById(id);
+					if (el) el.addEventListener('input', Utils.applyCurrencyMask.bind(Utils));
+				});
 			}
 
 			// --- 2. HANDLERS DE AUTENTICAÇÃO E DADOS ---
@@ -2899,13 +2914,13 @@ class App {
 							<p class="font-bold text-white mb-2">${c.clientName} <span class="text-xs text-gray-400 font-normal">(${c.advogado})</span></p>`;
 						c.custasEscritorio.forEach(d => {
 							custasHtml += `<div class="flex justify-between items-center py-1 border-b border-gray-700/50">
-								<span class="text-gray-300 text-xs"><span class="text-purple-400 mr-1">🏢</span>${d.descricao} <span class="text-gray-500">(${Utils.formatDate(d.data)})</span></span>
+								<span class="text-gray-300 text-xs"><span class="text-purple-400 mr-1"><i class="fas fa-building"></i></span>${d.descricao} <span class="text-gray-500">(${Utils.formatDate(d.data)})</span></span>
 								<span class="text-purple-300 font-semibold text-xs">${Utils.formatCurrency(d.valor)}</span>
 							</div>`;
 						});
 						c.custasCliente.forEach(d => {
 							custasHtml += `<div class="flex justify-between items-center py-1 border-b border-gray-700/50">
-								<span class="text-gray-300 text-xs"><span class="text-blue-400 mr-1">👤</span>${d.descricao} <span class="text-gray-500">(${Utils.formatDate(d.data)})</span></span>
+								<span class="text-gray-300 text-xs"><span class="text-blue-400 mr-1"><i class="fas fa-user-tie"></i></span>${d.descricao} <span class="text-gray-500">(${Utils.formatDate(d.data)})</span></span>
 								<span class="text-blue-300 font-semibold text-xs">${Utils.formatCurrency(d.valor)}</span>
 							</div>`;
 						});
