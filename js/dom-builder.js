@@ -504,6 +504,22 @@ export class DOMBuilder {
 		};
 		return item;
 	}
+
+	createFixedCostListItem(costObj) {
+		const item = this.buildElement('div', { className: 'setting-list-item' });
+		item.innerHTML = `
+			<div class="flex flex-col">
+				<span class="font-bold text-white text-sm">${Utils.sanitizeText(costObj.name)}</span>
+				<span class="text-xs text-gray-400">${Utils.sanitizeText(costObj.category)} - ${Utils.formatCurrency(costObj.value)}</span>
+			</div>
+			<button class="setting-list-remove-btn" title="Remover">&times;</button>
+		`;
+
+		item.querySelector('.setting-list-remove-btn').onclick = () => {
+			window.App.handleRemoveCustaFixa(costObj.name);
+		};
+		return item;
+	}
 	// [FIM DA ALTERAÇÃO - OFICINA]
 
 	// [INÍCIO DA ALTERAÇÃO - CONTRATO ESPECIAL]

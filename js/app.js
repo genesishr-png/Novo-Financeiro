@@ -142,6 +142,7 @@ class App {
 				// Formulário da Oficina
 				document.getElementById('formAddAdvogado').addEventListener('submit', this.handleAddAdvogado.bind(this));
 				document.getElementById('formAddCategoria')?.addEventListener('submit', this.handleAddCategoria.bind(this));
+				document.getElementById('formAddCustaFixa')?.addEventListener('submit', this.handleAddCustaFixa.bind(this));
 				// [FIM DA ALTERAÇÃO - OFICINA]
 
 				// Botão de Adicionar Serviço
@@ -649,6 +650,9 @@ class App {
 				}
 				if (!settings.categorias) {
 					settings.categorias = { list: [] };
+				}
+				if (!settings.custasFixas) {
+					settings.custasFixas = { list: [] };
 				}
 
 				this.database.settings = settings;
@@ -1231,6 +1235,22 @@ class App {
 						categoriaContainer.append(fragmentCat);
 					}
 				}
+
+				const fixedCostsContainer = document.getElementById('fixedCostsSettingsList');
+				if (fixedCostsContainer) {
+					fixedCostsContainer.innerHTML = '';
+					const fragmentFix = document.createDocumentFragment();
+					const fixedCostsList = this.database.settings.custasFixas?.list || [];
+
+					if (fixedCostsList.length === 0) {
+						fixedCostsContainer.innerHTML = `<p class="text-sm text-gray-400 text-center p-4">Nenhuma custa fixa cadastrada.</p>`;
+					} else {
+						[...fixedCostsList].sort((a, b) => a.name.localeCompare(b.name)).forEach(cost => {
+							fragmentFix.append(this.domBuilder.createFixedCostListItem(cost));
+						});
+						fixedCostsContainer.append(fragmentFix);
+					}
+				}
 			}
 			// [FIM DA ALTERAÇÃO - OFICINA]
 
@@ -1456,7 +1476,12 @@ class App {
 			}
 
 			populateCategoriaSelectModal() {
-				const select = document.getElementById('despesaCategoria');
+				this.populateSelectWithCategorias('despesaCategoria');
+				this.populateSelectWithCategorias('selectFixedCostCategory');
+			}
+
+			populateSelectWithCategorias(selectId) {
+				const select = document.getElementById(selectId);
 				if (!select) return;
 				const currentValue = select.value;
 				select.innerHTML = '';
@@ -2031,6 +2056,109 @@ class App {
 				const updatedList = currentList.filter(name => name !== nameToRemove);
 
 				await this.firebaseService.saveSystemSettings('categorias', { list: updatedList });
+			}
+
+			async handleAddCustaFixa(e) {
+				e.preventDefault();
+				if (!this.isUserAdmin) return;
+
+				const nameInput = document.getElementById('inputFixedCostName');
+				const valueInput = document.getElementById('inputFixedCostValue');
+				const catInput = document.getElementById('selectFixedCostCategory');
+
+				const newCost = {
+					name: Utils.sanitizeText(nameInput.value),
+					value: Utils.parseNumber(valueInput.value),
+					category: catInput.value
+				};
+
+				if (!newCost.name || !newCost.category || newCost.value <= 0) {
+					Utils.showToast('Preencha todos os campos corretamente.', 'error');
+					return;
+				}
+
+				const currentList = this.database.settings.custasFixas?.list || [];
+				if (currentList.some(c => c.name.toLowerCase() === newCost.name.toLowerCase())) {
+					Utils.showToast('Já existe uma custa fixa com este nome.', 'error');
+					return;
+				}
+
+				const updatedList = [...currentList, newCost];
+				const success = await this.firebaseService.saveSystemSettings('custasFixas', { list: updatedList });
+
+				if (success) {
+					nameInput.value = '';
+					valueInput.value = '';
+					catInput.value = '';
+				}
+			}
+
+			async handleRemoveCustaFixa(nameToRemove) {
+				if (!this.isUserAdmin) return;
+
+				const ok = await Utils.confirm(`Remover custa fixa "${nameToRemove}"?`);
+				if (!ok) return;
+
+				const currentList = this.database.settings.custasFixas?.list || [];
+				const updatedList = currentList.filter(c => c.name !== nameToRemove);
+
+				await this.firebaseService.saveSystemSettings('custasFixas', { list: updatedList });
+			}
+
+			async launchFixedCostsForMonth() {
+				if (!this.isUserAdmin) return;
+				
+				const filterEl = document.getElementById('despesasMonthFilter');
+				const selectedMonth = filterEl.value; // format YYYY-MM
+				if (!selectedMonth) {
+					Utils.showToast('Selecione um mês de referência.', 'error');
+					return;
+				}
+
+				const templates = this.database.settings.custasFixas?.list || [];
+				if (templates.length === 0) {
+					Utils.showToast('Nenhuma custa fixa cadastrada na Oficina.', 'warning');
+					return;
+				}
+
+				const ok = await Utils.confirm(`Deseja lançar as ${templates.length} custas fixas para o mês ${selectedMonth}?`);
+				if (!ok) return;
+
+				// Evitar duplicidade: Checar se já existem despesas com o mesmo nome no mesmo mês
+				const existingExpenses = this.database.officeExpenses.filter(e => {
+					if (e.isDeleted) return false;
+					const d = new Date(e.dueDate);
+					const monthStr = d.toISOString().substring(0, 7);
+					return monthStr === selectedMonth;
+				});
+
+				const batchPromises = [];
+				let count = 0;
+
+				for (const template of templates) {
+					const exists = existingExpenses.some(e => e.description === template.name);
+					if (exists) continue;
+
+					const newExpense = {
+						description: template.name,
+						category: template.category,
+						value: template.value,
+						dueDate: `${selectedMonth}-05`, // Padrão dia 5
+						status: 'Pendente',
+						isFixed: true,
+						createdAt: new Date().toISOString()
+					};
+					batchPromises.push(this.firebaseService.addOfficeExpense(newExpense));
+					count++;
+				}
+
+				if (count === 0) {
+					Utils.showToast('As custas fixas já foram lançadas para este mês.', 'info');
+				} else {
+					await Promise.all(batchPromises);
+					Utils.showToast(`${count} custas fixas lançadas com sucesso.`, 'success');
+					this.renderDespesas();
+				}
 			}
 			// [FIM DA ALTERAÇÃO - OFICINA]
 

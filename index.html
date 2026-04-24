@@ -315,8 +315,13 @@
 							<input type="month" id="despesasMonthFilter" class="glass-select text-sm" style="color-scheme: dark;" onchange="window.App.renderDespesas()">
 						</div>
 						
+						<button id="launchFixedCostsBtn" onclick="window.App.launchFixedCostsForMonth()"
+							class="bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/30 text-indigo-300 font-bold py-2.5 px-5 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2">
+							<i class="fas fa-sync-alt"></i> Lançar Custas Fixas
+						</button>
+
 						<button onclick="window.App.openDespesaModal()"
-							class="ml-auto bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-2.5 px-5 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2">
+							class="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-2.5 px-5 rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2">
 							<i class="fas fa-plus-circle"></i> Nova Despesa
 						</button>
 					</div>
@@ -646,6 +651,31 @@
 							</form>
 
 							<div class="space-y-2 max-h-80 overflow-y-auto" id="categoriaSettingsList">
+							</div>
+						</div>
+						<div class="dark-card shadow-lg p-6 rounded-lg">
+							<h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+								<i class="fas fa-sync-alt text-indigo-400"></i>
+								Custas Fixas Mensais
+							</h3>
+							<p class="text-sm text-gray-400 mb-4">
+								Defina as despesas que se repetem todo mês (Ex: Aluguel, Internet).
+							</p>
+
+							<form id="formAddCustaFixa" class="space-y-3 mb-4 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+								<input type="text" id="inputFixedCostName" placeholder="Nome (Ex: Energia)" class="form-input w-full" required>
+								<div class="flex gap-2">
+									<input type="number" step="0.01" id="inputFixedCostValue" placeholder="Valor Padrão (R$)" class="form-input flex-1" required>
+									<select id="selectFixedCostCategory" class="form-input flex-1" required>
+										<option value="">Categoria...</option>
+									</select>
+								</div>
+								<button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg transition-all">
+									<i class="fas fa-plus"></i> Salvar Modelo
+								</button>
+							</form>
+
+							<div class="space-y-2 max-h-60 overflow-y-auto" id="fixedCostsSettingsList">
 							</div>
 						</div>
 					</div>
