@@ -188,6 +188,11 @@ class App {
 				const debouncedParcelas = Utils.debounce(() => this.renderParcelasPage(), 300);
 				document.getElementById('parcelasSearchInput').addEventListener('input', debouncedParcelas);
 
+				// [NOVO] Listener da busca de receitas avulsas
+				const debouncedReceitas = Utils.debounce(() => this.renderReceitasAvulsas(), 300);
+				const recSearch = document.getElementById('receitasSearchInput');
+				if (recSearch) recSearch.addEventListener('input', debouncedReceitas);
+
 				// [REVOLUÇÃO] Listener do menu mobile
 				document.getElementById('mobile-menu-toggle').addEventListener('click', () => {
 					const sidebar = document.getElementById('sidebar');
@@ -567,22 +572,27 @@ class App {
 			}
 
 			renderReceitasAvulsas() {
+				const searchTerm = (document.getElementById('receitasSearchInput')?.value || '').toLowerCase();
 				let revenues = [...(this.database.extraRevenues || [])].filter(r => !r.isDeleted);
+				
+				if (searchTerm) {
+					revenues = revenues.filter(r => 
+						r.description.toLowerCase().includes(searchTerm) || 
+						r.origin.toLowerCase().includes(searchTerm)
+					);
+				}
+
 				revenues.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-				const tbody = document.getElementById('receitasAvulsasList');
-				const emptyState = document.getElementById('receitasAvulsasEmptyState');
-				const table = document.getElementById('table-receitas-avulsas');
+				const tbody = document.getElementById('receitasList');
+				const pageContainer = document.getElementById('page-avulsas');
+				if (!tbody || !pageContainer) return;
 
 				tbody.innerHTML = '';
 				
 				if (revenues.length === 0) {
-					table.classList.add('hidden');
-					emptyState.classList.remove('hidden');
+					tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-500"><i class="fas fa-search fa-2x mb-3 opacity-20"></i><p>Nenhuma receita encontrada.</p></td></tr>`;
 				} else {
-					table.classList.remove('hidden');
-					emptyState.classList.add('hidden');
-
 					revenues.forEach(rec => {
 						const tr = document.createElement('tr');
 						tr.className = "hover:bg-gray-800/50 transition-colors border-b border-gray-700/50";
@@ -590,13 +600,15 @@ class App {
 						const dateObj = new Date(rec.date + 'T12:00:00Z');
 						
 						tr.innerHTML = `
-							<td class="p-3 text-white">${rec.description}</td>
-							<td class="p-3 text-gray-400">${rec.origin}</td>
-							<td class="p-3 text-gray-300">${dateObj.toLocaleDateString('pt-BR')}</td>
-							<td class="p-3 font-bold text-green-400">+ ${Utils.formatCurrency(rec.value)}</td>
-							<td class="p-3 text-right">
-								<button onclick="window.App.openReceitaAvulsaModal('${rec.id}')" class="text-indigo-400 hover:text-indigo-300 mr-3" title="Editar"><i class="fas fa-edit"></i></button>
-								<button onclick="window.App.deleteReceita('${rec.id}')" class="text-red-400 hover:text-red-300" title="Excluir"><i class="fas fa-trash"></i></button>
+							<td class="p-4 text-white font-medium">${rec.description}</td>
+							<td class="p-4 text-gray-400">${rec.origin}</td>
+							<td class="p-4 text-gray-300 text-sm">${dateObj.toLocaleDateString('pt-BR')}</td>
+							<td class="p-4 font-bold text-green-400 text-lg">+ ${Utils.formatCurrency(rec.value)}</td>
+							<td class="p-4 text-right">
+								<div class="flex justify-end gap-3">
+									<button onclick="window.App.openReceitaAvulsaModal('${rec.id}')" class="p-2 text-indigo-400 hover:bg-indigo-400/10 rounded-lg transition-all" title="Editar"><i class="fas fa-edit"></i></button>
+									<button onclick="window.App.deleteReceita('${rec.id}')" class="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-all" title="Excluir"><i class="fas fa-trash"></i></button>
+								</div>
 							</td>
 						`;
 						tbody.appendChild(tr);
@@ -1278,7 +1290,8 @@ class App {
 					'page-performance': 'Performance Gerencial',
 					'page-relatorios': 'Relatórios Avançados',
 					'page-lixeira': 'Lixeira',
-					'page-oficina': 'Oficina de Configurações' // [INÍCIO DA ALTERAÇÃO - OFICINA]
+					'page-oficina': 'Oficina de Configurações', // [INÍCIO DA ALTERAÇÃO - OFICINA]
+					'page-avulsas': 'Receitas Avulsas'
 				};
 
 				// [NOVO v5.5] Destrói gráficos se ESTIVERMOS a SAIR da página de relatórios OU performance
