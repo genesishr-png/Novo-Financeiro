@@ -648,29 +648,31 @@
 							<div class="space-y-2 max-h-80 overflow-y-auto" id="categoriaSettingsList">
 							</div>
 						</div>
-						<div class="dark-card shadow-lg p-6 rounded-lg">
-							<h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
-								<i class="fas fa-sync-alt text-indigo-400"></i>
-								Custas Fixas Mensais
-							</h3>
-							<p class="text-sm text-gray-400 mb-4">
-								Defina as despesas que se repetem todo mês (Ex: Aluguel, Internet).
-							</p>
+						<div class="dark-card shadow-lg p-6 rounded-lg md:col-span-2">
+							<div class="max-w-3xl mx-auto">
+								<h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+									<i class="fas fa-sync-alt text-indigo-400"></i>
+									Custas Fixas Mensais
+								</h3>
+								<p class="text-sm text-gray-400 mb-4">
+									Defina as despesas que se repetem todo mês (Ex: Aluguel, Internet).
+								</p>
 
-							<form id="formAddCustaFixa" class="space-y-3 mb-4 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
-								<input type="text" id="inputFixedCostName" placeholder="Nome (Ex: Energia)" class="form-input w-full" required>
-								<div class="flex gap-2">
-									<input type="text" id="inputFixedCostValue" placeholder="Valor Padrão (R$)" class="form-input flex-1" inputmode="numeric" required>
-									<select id="selectFixedCostCategory" class="form-input flex-1" required>
-										<option value="">Categoria...</option>
-									</select>
+								<form id="formAddCustaFixa" class="space-y-3 mb-4 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+									<input type="text" id="inputFixedCostName" placeholder="Nome (Ex: Energia)" class="form-input w-full" required>
+									<div class="flex gap-2">
+										<input type="text" id="inputFixedCostValue" placeholder="Valor Padrão (R$)" class="form-input flex-1" inputmode="numeric" required>
+										<select id="selectFixedCostCategory" class="form-input flex-1" required>
+											<option value="">Categoria...</option>
+										</select>
+									</div>
+									<button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg transition-all">
+										<i class="fas fa-plus"></i> Salvar Modelo
+									</button>
+								</form>
+
+								<div class="space-y-2 max-h-60 overflow-y-auto" id="fixedCostsSettingsList">
 								</div>
-								<button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg transition-all">
-									<i class="fas fa-plus"></i> Salvar Modelo
-								</button>
-							</form>
-
-							<div class="space-y-2 max-h-60 overflow-y-auto" id="fixedCostsSettingsList">
 							</div>
 						</div>
 					</div>
