@@ -4096,17 +4096,17 @@ class App {
 					return;
 				}
 
-				const dropZone = document.getElementById('ai-drop-zone');
 				const loader = document.getElementById('ai-loader');
-				const resultForm = document.getElementById('ai-result-form');
+				const resultList = document.getElementById('ai-results-list');
+				const resultContainer = document.getElementById('ai-search-results');
 
-				dropZone.classList.add('hidden');
-				resultForm.classList.add('hidden');
 				loader.classList.remove('hidden');
+				resultContainer.classList.add('hidden');
+				resultList.innerHTML = '';
 
 				try {
 					const API_BASE = "https://api-novo-financeiro.onrender.com/api";
-					const res = await fetch(`${API_BASE}/onedrive/search`, { 
+					const res = await fetch(`${API_BASE}/onedrive/list`, { 
 						method: 'POST', 
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({ client_name: clientName }) 
@@ -4114,11 +4114,69 @@ class App {
 					const responseData = await res.json();
 
 					if (res.ok && responseData.success) {
-						this.currentAiData = responseData.data;
-						this.fillAiForm(this.currentAiData);
-						Utils.showToast('Contrato encontrado e lido!', 'success');
+						if (responseData.files.length === 0) {
+							Utils.showToast('Nenhum PDF encontrado para este cliente.', 'info');
+							return;
+						}
+
+						responseData.files.forEach(file => {
+							const item = document.createElement('div');
+							item.className = "flex items-center justify-between bg-gray-800/50 hover:bg-indigo-500/10 border border-gray-700 hover:border-indigo-500/50 p-4 rounded-xl transition-all cursor-pointer group";
+							item.onclick = () => this.selectAiFile(file.id, file.name);
+							
+							const icon = file.isFolder ? 'fa-folder text-yellow-500' : 'fa-file-pdf text-red-500';
+							
+							item.innerHTML = `
+								<div class="flex items-center gap-3">
+									<i class="fas ${icon} text-xl"></i>
+									<div class="text-left">
+										<p class="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors">${file.name}</p>
+										<p class="text-[10px] text-gray-500 truncate max-w-[200px]">${file.path || 'Raiz'}</p>
+									</div>
+								</div>
+								<i class="fas fa-chevron-right text-gray-600 group-hover:text-indigo-500"></i>
+							`;
+							resultList.appendChild(item);
+						});
+						resultContainer.classList.remove('hidden');
+						Utils.showToast(`${responseData.files.length} resultados encontrados.`, 'success');
 					} else {
 						throw new Error(responseData.detail || "Erro na busca do OneDrive.");
+					}
+				} catch (error) {
+					Utils.showToast(error.message, 'error');
+				} finally {
+					loader.classList.add('hidden');
+				}
+			}
+
+			async selectAiFile(fileId, fileName) {
+				const loader = document.getElementById('ai-loader');
+				const resultForm = document.getElementById('ai-result-form');
+				const dropZone = document.getElementById('ai-drop-zone');
+				const resultContainer = document.getElementById('ai-search-results');
+
+				resultContainer.classList.add('hidden');
+				dropZone.classList.add('hidden');
+				resultForm.classList.add('hidden');
+				loader.classList.remove('hidden');
+
+				try {
+					Utils.showToast(`Baixando e processando: ${fileName}`, 'info');
+					const API_BASE = "https://api-novo-financeiro.onrender.com/api";
+					const res = await fetch(`${API_BASE}/onedrive/select`, { 
+						method: 'POST', 
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ file_id: fileId, file_name: fileName }) 
+					});
+					const responseData = await res.json();
+
+					if (res.ok && responseData.success) {
+						this.currentAiData = responseData.data;
+						this.fillAiForm(this.currentAiData);
+						Utils.showToast('Contrato lido com sucesso!', 'success');
+					} else {
+						throw new Error(responseData.detail || "Erro no processamento.");
 					}
 				} catch (error) {
 					Utils.showToast(error.message, 'error');
