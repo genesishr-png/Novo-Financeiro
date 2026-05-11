@@ -4126,7 +4126,7 @@ class App {
 				} finally {
 					loader.classList.add('hidden');
 				}
-			},
+			}
 
 			async handleAiFile(file) {
 				if (file.type !== 'application/pdf') {
