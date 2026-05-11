@@ -4088,6 +4088,46 @@ class App {
 				});
 			}
 
+			async searchAiFile() {
+				const searchInput = document.getElementById('ai-onedrive-search');
+				const clientName = searchInput.value.trim();
+				if (!clientName) {
+					Utils.showToast('Digite o nome do cliente.', 'error');
+					return;
+				}
+
+				const dropZone = document.getElementById('ai-drop-zone');
+				const loader = document.getElementById('ai-loader');
+				const resultForm = document.getElementById('ai-result-form');
+
+				dropZone.classList.add('hidden');
+				resultForm.classList.add('hidden');
+				loader.classList.remove('hidden');
+
+				try {
+					const API_BASE = "https://api-novo-financeiro.onrender.com/api";
+					const res = await fetch(`${API_BASE}/onedrive/search`, { 
+						method: 'POST', 
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ client_name: clientName }) 
+					});
+					const responseData = await res.json();
+
+					if (res.ok && responseData.success) {
+						this.currentAiData = responseData.data;
+						this.fillAiForm(this.currentAiData);
+						Utils.showToast('Contrato encontrado e lido!', 'success');
+					} else {
+						throw new Error(responseData.detail || "Erro na busca do OneDrive.");
+					}
+				} catch (error) {
+					Utils.showToast(error.message, 'error');
+					dropZone.classList.remove('hidden');
+				} finally {
+					loader.classList.add('hidden');
+				}
+			},
+
 			async handleAiFile(file) {
 				if (file.type !== 'application/pdf') {
 					Utils.showToast('Apenas arquivos PDF são suportados.', 'error');
