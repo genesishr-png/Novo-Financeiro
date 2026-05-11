@@ -4106,7 +4106,7 @@ class App {
 				formData.append('file', file);
 
 				try {
-					const API_BASE = "http://localhost:8000/api"; // Ajuste conforme necessário
+					const API_BASE = "https://api-novo-financeiro.onrender.com/api"; // Ajuste conforme necessário
 					const res = await fetch(`${API_BASE}/extract`, { method: 'POST', body: formData });
 					const responseData = await res.json();
 
