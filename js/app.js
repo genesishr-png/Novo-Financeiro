@@ -1375,7 +1375,8 @@ class App {
 					'page-relatorios': 'Relatórios Avançados',
 					'page-lixeira': 'Lixeira',
 					'page-oficina': 'Oficina de Configurações', // [INÍCIO DA ALTERAÇÃO - OFICINA]
-					'page-avulsas': 'Receitas Avulsas'
+					'page-avulsas': 'Receitas Avulsas',
+					'page-automacao': 'Automação Inteligente'
 				};
 
 				// [NOVO v5.5] Destrói gráficos se ESTIVERMOS a SAIR da página de relatórios OU performance
@@ -1396,7 +1397,7 @@ class App {
 				document.getElementById('page-title').textContent = pageTitles[pageId] || 'Painel';
 
 				// Esconde todas as páginas
-				['page-dashboard', 'page-parcelas', 'page-servicos', 'page-lixeira', 'page-relatorios', 'page-performance', 'page-oficina', 'page-escritorio', 'page-avulsas'].forEach(id => {
+				['page-dashboard', 'page-parcelas', 'page-servicos', 'page-lixeira', 'page-relatorios', 'page-performance', 'page-oficina', 'page-escritorio', 'page-avulsas', 'page-automacao'].forEach(id => {
 					const el = document.getElementById(id);
 					if (el) el.classList.add('hidden');
 				});
@@ -1429,6 +1430,10 @@ class App {
 
 				// Renderiza o conteúdo da página que acabou de ser aberta
 				this.render();
+
+				if (pageId === 'page-automacao') {
+					this.initAutomationListeners();
+				}
 			}
 
 			setupUIAccess() {
@@ -4042,6 +4047,168 @@ class App {
 
 				if (!modal.contains(document.activeElement)) {
 					firstElement.focus();
+				}
+			}
+
+			// --- [MUDANÇA v6.0] AUTOMAÇÃO INTELIGENTE (IA) ---
+
+			initAutomationListeners() {
+				const dropZone = document.getElementById('ai-drop-zone');
+				const fileInput = document.getElementById('ai-file-input');
+				if (!dropZone || !fileInput) return;
+
+				dropZone.onclick = () => fileInput.click();
+
+				dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-500/10'); };
+				dropZone.ondragleave = () => { dropZone.classList.remove('border-indigo-500', 'bg-indigo-500/10'); };
+				dropZone.ondrop = (e) => {
+					e.preventDefault();
+					dropZone.classList.remove('border-indigo-500', 'bg-indigo-500/10');
+					if (e.dataTransfer.files.length) this.handleAiFile(e.dataTransfer.files[0]);
+				};
+
+				fileInput.onchange = (e) => {
+					if (e.target.files.length) this.handleAiFile(e.target.files[0]);
+				};
+
+				// Popula advogados
+				const select = document.getElementById('ai-advogado-select');
+				if (select) {
+					select.innerHTML = '<option value="Não Informado">Não Informado</option>';
+					const advogados = this.database.settings.advogados?.list || [];
+					advogados.sort().forEach(name => {
+						select.add(new Option(name, name));
+					});
+					select.value = this.isUserAdmin ? 'Não Informado' : this.currentUserDisplayName;
+				}
+
+				// Listener para atualizar parcelas
+				['ai-total-value', 'ai-num-parcels'].forEach(id => {
+					document.getElementById(id)?.addEventListener('input', () => this.updateAiParcelsPreview());
+				});
+			}
+
+			async handleAiFile(file) {
+				if (file.type !== 'application/pdf') {
+					Utils.showToast('Apenas arquivos PDF são suportados.', 'error');
+					return;
+				}
+
+				const dropZone = document.getElementById('ai-drop-zone');
+				const loader = document.getElementById('ai-loader');
+				const resultForm = document.getElementById('ai-result-form');
+
+				dropZone.classList.add('hidden');
+				resultForm.classList.add('hidden');
+				loader.classList.remove('hidden');
+
+				const formData = new FormData();
+				formData.append('file', file);
+
+				try {
+					const API_BASE = "http://localhost:8000/api"; // Ajuste conforme necessário
+					const res = await fetch(`${API_BASE}/extract`, { method: 'POST', body: formData });
+					const responseData = await res.json();
+
+					if (res.ok && responseData.success) {
+						this.currentAiData = responseData.data;
+						this.fillAiForm(this.currentAiData);
+						Utils.showToast('Leitura concluída!', 'success');
+					} else {
+						throw new Error(responseData.detail || "Erro na extração.");
+					}
+				} catch (error) {
+					console.error(error);
+					Utils.showToast('Erro ao ler contrato: ' + error.message, 'error');
+					dropZone.classList.remove('hidden');
+				} finally {
+					loader.classList.add('hidden');
+				}
+			}
+
+			fillAiForm(data) {
+				document.getElementById('ai-client-name').value = data.clientName;
+				document.getElementById('ai-total-value').value = data.totalValue;
+				document.getElementById('ai-num-parcels').value = data.parcels.length;
+				document.getElementById('ai-service-name').value = data.serviceTypes[0].name;
+				
+				const select = document.getElementById('ai-advogado-select');
+				if (data.advogadoResponsavel && data.advogadoResponsavel !== "Não Informado") {
+					select.value = data.advogadoResponsavel;
+				}
+
+				this.updateAiParcelsPreview();
+				document.getElementById('ai-result-form').classList.remove('hidden');
+			}
+
+			updateAiParcelsPreview() {
+				const numParcels = parseInt(document.getElementById('ai-num-parcels').value) || 1;
+				const totalValue = parseFloat(document.getElementById('ai-total-value').value) || 0;
+				const parcelValue = totalValue / numParcels;
+				
+				let html = '';
+				for(let i=1; i<=numParcels; i++) {
+					html += `
+					<div class="flex justify-between items-center bg-gray-900 border border-gray-800 p-2 rounded text-xs">
+						<span class="text-gray-400">Parcela ${i}</span>
+						<span class="text-white font-bold">${Utils.formatCurrency(parcelValue)}</span>
+					</div>`;
+				}
+				document.getElementById('ai-parcels-preview').innerHTML = html;
+			}
+
+			async saveAiContract() {
+				if (!this.currentAiData) return;
+
+				const adv = document.getElementById('ai-advogado-select').value;
+				const clientName = document.getElementById('ai-client-name').value;
+				const totalValue = parseFloat(document.getElementById('ai-total-value').value);
+				const numParcels = parseInt(document.getElementById('ai-num-parcels').value);
+
+				const finalData = {
+					...this.currentAiData,
+					clientName: clientName,
+					totalValue: totalValue,
+					advogadoResponsavel: adv,
+					paymentType: numParcels > 1 ? "Parcelado" : "À Vista",
+					createdAt: new Date().toISOString()
+				};
+
+				finalData.serviceTypes[0].name = document.getElementById('ai-service-name').value;
+
+				const parcelValue = totalValue / numParcels;
+				const baseDate = this.currentAiData.parcels[0]?.dueDate || new Date().toISOString();
+				let currentDueDate = new Date(baseDate);
+
+				finalData.parcels = [];
+				for (let i = 0; i < numParcels; i++) {
+					finalData.parcels.push({
+						number: i + 1,
+						value: parcelValue,
+						valuePaid: 0,
+						status: "Pendente",
+						dueDate: currentDueDate.toISOString(),
+						paymentDate: null
+					});
+					currentDueDate.setMonth(currentDueDate.getMonth() + 1);
+				}
+
+				try {
+					Utils.showToast('Salvando contrato...', 'info');
+					const success = await this.firebaseService.addContract(finalData);
+					
+					if (success) {
+						Utils.showToast('Contrato lançado com sucesso!', 'success');
+						setTimeout(() => {
+							this.showPage('page-dashboard');
+							document.getElementById('ai-drop-zone').classList.remove('hidden');
+							document.getElementById('ai-result-form').classList.add('hidden');
+							this.currentAiData = null;
+						}, 1500);
+					}
+				} catch (error) {
+					console.error(error);
+					Utils.showToast('Erro ao salvar contrato.', 'error');
 				}
 			}
 		}
