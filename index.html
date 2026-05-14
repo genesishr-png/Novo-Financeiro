@@ -347,6 +347,7 @@
 								<tr class="bg-gray-800 text-gray-400 text-sm border-b border-gray-700">
 									<th class="p-3 font-semibold">Descrição</th>
 									<th class="p-3 font-semibold">Categoria</th>
+									<th class="p-3 font-semibold">Banco</th>
 									<th class="p-3 font-semibold">Vencimento</th>
 									<th class="p-3 font-semibold">Valor</th>
 									<th class="p-3 font-semibold">Status</th>
@@ -1141,6 +1142,15 @@
 					<label for="despesaCategoria" class="block text-sm font-medium text-gray-400 mb-1">Categoria</label>
 					<select id="despesaCategoria" class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200" required>
 						<option value="">Carregando categorias...</option>
+					</select>
+				</div>
+				<div>
+					<label for="despesaBanco" class="block text-sm font-medium text-gray-400 mb-1">Banco</label>
+					<select id="despesaBanco" class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white transition-all duration-200">
+						<option value="">Selecione o banco...</option>
+						<option value="Bradesco">🏦 Bradesco</option>
+						<option value="Caixa Econômica">🏦 Caixa Econômica</option>
+						<option value="Banco do Brasil">🏦 Banco do Brasil</option>
 					</select>
 				</div>
 				<div class="grid grid-cols-2 gap-4">

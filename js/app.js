@@ -411,6 +411,7 @@ class App {
 						document.getElementById('despesaId').value = exp.id;
 						document.getElementById('despesaDescricao').value = exp.description;
 						document.getElementById('despesaCategoria').value = exp.category;
+						document.getElementById('despesaBanco').value = exp.bank || '';
 						document.getElementById('despesaVencimento').value = exp.dueDate;
 						document.getElementById('despesaValor').value = exp.value;
 						if (exp.status === 'Paga') {
@@ -444,6 +445,7 @@ class App {
 				const data = {
 					description: Utils.sanitizeText(document.getElementById('despesaDescricao').value),
 					category: document.getElementById('despesaCategoria').value,
+					bank: document.getElementById('despesaBanco').value || null,
 					dueDate: document.getElementById('despesaVencimento').value,
 					value: Utils.parseNumber(document.getElementById('despesaValor').value),
 					status: isPaga ? 'Paga' : 'Pendente',
@@ -546,6 +548,7 @@ class App {
 						const dateObj = new Date(exp.dueDate + 'T12:00:00Z');
 						
 						const badgeFixa = exp.isFixed ? `<span class="ml-2 text-[10px] bg-indigo-600/20 text-indigo-400 px-1.5 py-0.5 rounded border border-indigo-500/20"><i class="fas fa-sync-alt"></i> FIXA</span>` : '';
+						const badgeBanco = exp.bank ? `<span class="ml-1 text-[10px] bg-blue-600/20 text-blue-300 px-1.5 py-0.5 rounded border border-blue-500/20">${exp.bank}</span>` : '<span class="text-gray-500 text-xs">—</span>';
 
 						tr.innerHTML = `
 							<td class="p-3 text-white flex items-center">
@@ -553,6 +556,7 @@ class App {
 								${badgeFixa}
 							</td>
 							<td class="p-3 text-gray-400 text-sm">${exp.category}</td>
+							<td class="p-3">${badgeBanco}</td>
 							<td class="p-3 text-gray-300">${dateObj.toLocaleDateString('pt-BR')}</td>
 							<td class="p-3 font-semibold text-gray-200">${Utils.formatCurrency(exp.value)}</td>
 							<td class="p-3">
