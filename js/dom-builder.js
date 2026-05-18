@@ -33,7 +33,8 @@ export class DOMBuilder {
 
 		const title = this.buildElement('p', { className: 'font-bold text-white', text: contract.clientName });
 		const services = (contract.serviceTypes || []).map(s => s.name).join(', ');
-		const subtitle = this.buildElement('p', { className: 'text-sm text-gray-400 mb-3', text: `${services} - Parcela ${parcel.number}/${contract.parcels.length || 1}` });
+		const subtitleText = parcel.isExito ? `Bonificação (Êxito) - Parc. ${parcel.number}` : `${services} - Parcela ${parcel.number}/${contract.parcels.filter(p => !p.isExito && !p.isDiligencia).length || 1}`;
+		const subtitle = this.buildElement('p', { className: 'text-sm text-gray-400 mb-3', text: subtitleText });
 
 		const details = this.buildElement('div', { className: 'space-y-2 text-sm' });
 		let actionButton;
@@ -203,7 +204,9 @@ export class DOMBuilder {
 		card.append(header);
 
 		const services = (contract.serviceTypes || []).map(s => s.name).join(', ');
-		const subText = isDiligencia ? (parcel.description || 'Custas Extras') : `${services} - Parcela ${parcel.number}/${contract.parcels.length || 1}`;
+		let subText = `${services} - Parcela ${parcel.number}/${contract.parcels.filter(p => !p.isExito && !p.isDiligencia).length || 1}`;
+		if (isDiligencia) subText = parcel.description || 'Custas Extras';
+		if (parcel.isExito) subText = `Bonificação (Êxito) - Parc. ${parcel.number}`;
 		card.append(this.buildElement('p', { className: 'text-sm text-gray-400 mb-3', text: subText }));
 
 		const details = this.buildElement('div', { className: 'border-t border-gray-700 pt-3 mt-3 space-y-2' });

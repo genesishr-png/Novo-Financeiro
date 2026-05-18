@@ -126,6 +126,10 @@
 					<i class="fas fa-hand-holding-usd w-5 text-center"></i>
 					<span>Receitas Avulsas</span>
 				</a>
+				<a onclick="window.App.showPage('page-importar-despesas')" id="tab-importar-despesas" class="sidebar-nav-item admin-only hidden">
+					<i class="fas fa-file-csv w-5 text-center"></i>
+					<span>Importar Despesas</span>
+				</a>
 				<a onclick="window.App.showPage('page-lixeira')" id="tab-lixeira" class="sidebar-nav-item">
 					<i class="fas fa-trash-alt w-5 text-center"></i>
 					<span>Lixeira</span>
@@ -394,6 +398,110 @@
 							</thead>
 							<tbody id="receitasList" class="divide-y divide-gray-700/50"></tbody>
 						</table>
+					</div>
+				</div>
+
+				<div id="page-importar-despesas" class="hidden admin-only">
+					<div class="mb-6 border-b border-gray-700 pb-4">
+						<h2 class="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+							<i class="fas fa-file-upload text-indigo-400"></i> Conciliação e Importação de Planilhas (CSV)
+						</h2>
+						<p class="text-gray-400 mt-1">Carregue a planilha financeira (CSV) de saídas para realizar a conciliação inteligente de despesas e lançar tudo em lote.</p>
+					</div>
+
+					<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+						<!-- Configuração de Importação -->
+						<div class="lg:col-span-1 dark-card rounded-2xl p-6 border border-gray-700 flex flex-col justify-between">
+							<div>
+								<h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+									<i class="fas fa-sliders-h text-indigo-400"></i> Parâmetros de Filtro
+								</h3>
+								<div class="space-y-4">
+									<div>
+										<label for="csvImportMonth" class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Mês de Referência para Conciliação</label>
+										<input type="month" id="csvImportMonth" class="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white focus:ring-2 focus:ring-indigo-500 outline-none" style="color-scheme: dark;">
+										<p class="text-[11px] text-gray-500 mt-1.5">O sistema usará este mês para encontrar despesas pendentes e custas fixas virtuais para conciliação.</p>
+									</div>
+								</div>
+							</div>
+							
+							<div class="mt-6 pt-6 border-t border-gray-700/50 space-y-2">
+								<h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Resumo da Planilha</h4>
+								<div class="flex justify-between text-sm">
+									<span class="text-gray-400">Total de Linhas:</span>
+									<span id="csvSummaryTotal" class="font-bold text-white">0</span>
+								</div>
+								<div class="flex justify-between text-sm">
+									<span class="text-gray-400">Filtradas (Saídas do Mês):</span>
+									<span id="csvSummaryFiltered" class="font-bold text-indigo-400">0</span>
+								</div>
+								<div class="flex justify-between text-sm">
+									<span class="text-gray-400">Para Conciliar:</span>
+									<span id="csvSummaryReconcile" class="font-bold text-yellow-400">0</span>
+								</div>
+								<div class="flex justify-between text-sm">
+									<span class="text-gray-400">Novas Despesas:</span>
+									<span id="csvSummaryNew" class="font-bold text-green-400">0</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Dropzone -->
+						<div class="lg:col-span-2 flex flex-col">
+							<div id="csv-drop-zone" class="flex-1 border-2 border-dashed border-gray-700 rounded-2xl p-10 text-center hover:border-indigo-500 hover:bg-indigo-500/5 transition-all cursor-pointer group flex flex-col items-center justify-center min-h-[250px]">
+								<input type="file" id="csv-file-input" class="hidden" accept=".csv">
+								<div class="text-6xl mb-4 opacity-50 group-hover:opacity-100 transition-opacity">📊</div>
+								<p class="text-xl font-bold text-white mb-2">Arraste seu arquivo CSV aqui</p>
+								<p class="text-gray-500 text-sm mb-2">ou clique para selecionar no computador</p>
+								<p class="text-xs text-indigo-400/80 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">Suporta arquivos separados por vírgula (,) ou ponto e vírgula (;)</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Preview da Importação -->
+					<div id="csv-preview-container" class="hidden dark-card rounded-2xl p-6 border border-gray-700 animate-in fade-in duration-300">
+						<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-gray-700/50 pb-4">
+							<div>
+								<h3 class="text-xl font-bold text-white">Despesas Encontradas no CSV</h3>
+								<p class="text-sm text-gray-400 mt-0.5">Revise os dados, selecione o banco e as despesas que deseja importar ou atualizar.</p>
+							</div>
+							<div class="flex gap-3">
+								<button id="csvSelectAllBtn" class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-2 px-4 rounded-xl text-sm transition-all border border-gray-700 flex items-center gap-2">
+									<i class="fas fa-check-square"></i> Selecionar Tudo
+								</button>
+								<button id="csvDeselectAllBtn" class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-2 px-4 rounded-xl text-sm transition-all border border-gray-700 flex items-center gap-2">
+									<i class="far fa-square"></i> Limpar Seleção
+								</button>
+							</div>
+						</div>
+
+						<div class="overflow-x-auto custom-scrollbar mb-6" style="max-height: 480px;">
+							<table class="w-full text-left border-collapse">
+								<thead>
+									<tr class="bg-gray-800/80 text-gray-400 text-xs uppercase tracking-widest font-black border-b border-gray-700 sticky top-0 z-10">
+										<th class="p-3 w-10 text-center"><input type="checkbox" id="csvHeaderCheckbox" class="rounded border-gray-600 bg-gray-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4" checked></th>
+										<th class="p-3 w-28">Data</th>
+										<th class="p-3 min-w-[200px]">Descrição (Cliente/Fornecedor)</th>
+										<th class="p-3 w-40">Classificação DRE</th>
+										<th class="p-3 w-36">Banco Debitante</th>
+										<th class="p-3 w-32">Valor BRL</th>
+										<th class="p-3 min-w-[220px]">Reconciliação / Status</th>
+									</tr>
+								</thead>
+								<tbody id="csvPreviewList" class="divide-y divide-gray-700/50 text-sm">
+									<!-- Injetado dinamicamente -->
+								</tbody>
+							</table>
+						</div>
+
+						<div class="flex justify-end gap-4 border-t border-gray-700/50 pt-6">
+							<button onclick="window.App.showPage('page-escritorio')" class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold py-3.5 px-6 rounded-xl transition-all border border-gray-700">
+								Cancelar
+							</button>
+							<button id="csvSubmitImportBtn" class="bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-black uppercase tracking-widest py-3.5 px-8 rounded-xl shadow-lg shadow-emerald-500/10 transition-all flex items-center gap-2">
+								<i class="fas fa-check-circle"></i> Confirmar Importação (<span id="csvCheckedCount">0</span>)
+							</button>
+						</div>
 					</div>
 				</div>
 
@@ -810,6 +918,10 @@
 			<a onclick="window.App.showPage('page-avulsas')" id="mobile-tab-avulsas" class="mobile-nav-item">
 				<i class="fas fa-hand-holding-usd text-xl"></i>
 				<span class="text-xs mt-1">Avulsas</span>
+			</a>
+			<a onclick="window.App.showPage('page-importar-despesas')" id="mobile-tab-importar-despesas" class="mobile-nav-item admin-only hidden">
+				<i class="fas fa-file-csv text-xl"></i>
+				<span class="text-xs mt-1">Importar</span>
 			</a>
 			<a onclick="window.App.showPage('page-lixeira')" id="mobile-tab-lixeira" class="mobile-nav-item">
 				<i class="fas fa-trash-alt text-xl"></i>
@@ -1307,11 +1419,45 @@
 			<div class="p-6 space-y-4 modal-body">
 				<div id="exitoInfo" class="mb-4 bg-gray-700 p-3 rounded-md"></div>
 				<div class="admin-only">
-					<label for="exitoValorRecebido" class="block text-sm font-medium text-gray-400 mb-1">Valor Líquido
-						Recebido (R$)</label>
-					<input type="text" id="exitoValorRecebido"
-						class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm text-white transition-all duration-200"
-						placeholder="R$ 0,00" required inputmode="numeric">
+					<div class="flex gap-4 mb-4">
+						<label class="flex items-center">
+							<input type="radio" name="exitoModalidade" value="avista" class="form-radio text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-500" checked>
+							<span class="ml-2 text-sm text-gray-300 font-medium">À Vista</span>
+						</label>
+						<label class="flex items-center">
+							<input type="radio" name="exitoModalidade" value="parcelado" class="form-radio text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-500">
+							<span class="ml-2 text-sm text-gray-300 font-medium">Parcelar Êxito</span>
+						</label>
+					</div>
+
+					<div id="exitoFieldsAvista">
+						<label for="exitoValorRecebido" class="block text-sm font-medium text-gray-400 mb-1">Valor Líquido
+							Recebido (R$)</label>
+						<input type="text" id="exitoValorRecebido"
+							class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm text-white transition-all duration-200"
+							placeholder="R$ 0,00" required inputmode="numeric">
+					</div>
+
+					<div id="exitoFieldsParcelado" class="hidden space-y-4 border-l-2 border-indigo-500 pl-4 py-2 mt-2">
+						<div>
+							<label for="exitoValorTotal" class="block text-sm font-medium text-gray-400 mb-1">Valor Total a Parcelar (R$)</label>
+							<input type="text" id="exitoValorTotal"
+								class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm text-white transition-all duration-200"
+								placeholder="R$ 0,00" inputmode="numeric">
+						</div>
+						<div class="flex gap-4">
+							<div class="flex-1">
+								<label for="exitoNumParcelas" class="block text-sm font-medium text-gray-400 mb-1">Nº Parcelas</label>
+								<input type="number" id="exitoNumParcelas" value="2" min="2"
+									class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm text-white transition-all duration-200">
+							</div>
+							<div class="flex-1">
+								<label for="exitoPrimeiroVencimento" class="block text-sm font-medium text-gray-400 mb-1">1º Vencimento</label>
+								<input type="date" id="exitoPrimeiroVencimento" style="color-scheme: dark;"
+									class="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md shadow-sm text-white transition-all duration-200">
+							</div>
+						</div>
+					</div>
 				</div>
 				<p class="mb-4 text-gray-400 non-admin-hidden">Confirme o recebimento do valor de êxito.</p>
 				<input type="hidden" id="exitoContractId">

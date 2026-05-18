@@ -94,8 +94,13 @@ export class ReportHandler {
 					const d = new Date(parcel.paymentDate);
 					if (d >= startDate && d <= endDate) {
 						const value = parcel.valuePaid;
-						totalParcelas += value;
-						detailedPayments.push({ type: `Parcela ${parcel.number}/${contract.parcels.filter(p => !p.isDiligencia).length}`, clientName: contract.clientName, date: d, value: value, advogado: advogado });
+						if (parcel.isExito) {
+							totalExito += value;
+							detailedPayments.push({ type: `Taxa de Êxito (Parc. ${parcel.number})`, clientName: contract.clientName, date: d, value: value, advogado: advogado });
+						} else {
+							totalParcelas += value;
+							detailedPayments.push({ type: `Parcela ${parcel.number}/${contract.parcels.filter(p => !p.isDiligencia && !p.isExito).length}`, clientName: contract.clientName, date: d, value: value, advogado: advogado });
+						}
 						byAdvogado[advogado] = (byAdvogado[advogado] || 0) + value;
 						addData(byMonth, d, value);
 					}

@@ -6,6 +6,7 @@ import { FirebaseService } from './firebase-service.js';
 import { AnalyticsHandler } from './analytics-handler.js';
 import { ReportHandler } from './report-handler.js';
 import { DOMBuilder } from './dom-builder.js';
+import { CSVHandler } from './csv-handler.js';
 
 const ADMIN_USERS = ["dra. renata fabris", "Darc", "dr. felipe gurjão", "lilian"];
 const CONTRACTS_PER_PAGE = 12;
@@ -73,6 +74,7 @@ class App {
 				this.reportHandler = new ReportHandler(this);
 				this.analyticsHandler = new AnalyticsHandler(this);
 				this.correctionCalculator = new CorrectionCalculator(this);
+				this.csvHandler = new CSVHandler(this);
 			}
 
 			// --- 1. INICIALIZAÇÃO E EVENT LISTENERS ---
@@ -85,6 +87,7 @@ class App {
 				this._setupModalAccessibility();
 				this._setupMonthFilters();
 				this._setupCurrencyMasks();
+				this.csvHandler.initialize();
 			}
 
 			// [MUDANÇA v5] Novo método para carregar referências DOM PÓS-DOMContentLoaded
@@ -129,6 +132,17 @@ class App {
 				document.getElementById('formContrato').addEventListener('submit', this.handleContractSubmit.bind(this));
 				document.getElementById('formPagamento').addEventListener('submit', this.handlePaymentSubmit.bind(this));
 				document.getElementById('formExito').addEventListener('submit', this.handleExitoSubmit.bind(this));
+				
+				// Toggle Parcelamento Exito
+				const radiosExito = document.querySelectorAll('input[name="exitoModalidade"]');
+				radiosExito.forEach(radio => {
+					radio.addEventListener('change', (e) => {
+						const isParcelado = e.target.value === 'parcelado';
+						document.getElementById('exitoFieldsAvista').classList.toggle('hidden', isParcelado);
+						document.getElementById('exitoFieldsParcelado').classList.toggle('hidden', !isParcelado);
+					});
+				});
+
 				const formDespesa = document.getElementById('formDespesa');
 				if (formDespesa) formDespesa.addEventListener('submit', this.handleDespesaSubmit.bind(this)); // [NOVO]
 
@@ -277,7 +291,7 @@ class App {
 			_setupCurrencyMasks() {
 				const fields = [
 					'valorTotal', 'parcelaValorManual', 'pagamentoValor', 
-					'exitoValorRecebido', 'despesaValor', 'receitaValor',
+					'exitoValorRecebido', 'exitoValorTotal', 'despesaValor', 'receitaValor',
 					'contratoDiligenciaValor', 'inputFixedCostValue'
 				];
 				fields.forEach(id => {
@@ -361,8 +375,14 @@ class App {
 				this.viewMode = this.viewMode === 'cliente' ? 'escritorio' : 'cliente';
 				const label = document.getElementById('view-toggle-label');
 				
-				const clienteTabs = ['tab-parcelas', 'tab-servicos', 'tab-performance', 'tab-relatorios'];
-				const escritorioTabs = ['tab-avulsas'];
+				const clienteTabs = [
+					'tab-parcelas', 'tab-servicos', 'tab-performance', 'tab-relatorios',
+					'mobile-tab-parcelas', 'mobile-tab-servicos', 'mobile-tab-performance', 'mobile-tab-relatorios'
+				];
+				const escritorioTabs = [
+					'tab-avulsas', 'tab-importar-despesas',
+					'mobile-tab-avulsas', 'mobile-tab-importar-despesas'
+				];
 				
 				if (this.viewMode === 'cliente') {
 					label.textContent = 'CLIENTE';
@@ -804,6 +824,8 @@ class App {
 					this.renderPerformancePage(); // [NOVO v5.5]
 				} else if (pageId === 'page-avulsas') {
 					this.renderReceitasAvulsas();
+				} else if (pageId === 'page-importar-despesas') {
+					this.csvHandler.renderImportPage();
 				} else if (pageId === 'page-oficina') { // [INÍCIO DA ALTERAÇÃO - OFICINA]
 					this.renderOficinaPage();
 				} // [FIM DA ALTERAÇÃO - OFICINA]
@@ -868,7 +890,7 @@ class App {
 						}
 					}
 
-					if (contract.successFee && !contract.successFeePaymentDate && (contract.parcels || []).every(p => p.status === 'Paga')) {
+					if (contract.successFee && !contract.successFeePaymentDate && !contract.successFeeParceled && (contract.parcels || []).filter(p => !p.isExito).every(p => p.status === 'Paga')) {
 						fragExito.append(this.domBuilder.createExitoCard(contract));
 						exitoPendente++;
 					}
@@ -1924,10 +1946,61 @@ class App {
 			async handleExitoSubmit(e) {
 				e.preventDefault();
 				const contractId = document.getElementById('exitoContractId').value;
-				const valueReceived = this.isUserAdmin ? Utils.parseNumber(document.getElementById('exitoValorRecebido').value) : 0;
+				const isParcelado = document.querySelector('input[name="exitoModalidade"]:checked').value === 'parcelado';
 				const contract = this.database.contracts.find(c => c.id === contractId);
+				if (!contract) return;
 
-				if (contract) {
+				if (isParcelado) {
+					// Lógica de Parcelamento do Êxito
+					const valorTotal = Utils.parseNumber(document.getElementById('exitoValorTotal').value);
+					const numParcelas = parseInt(document.getElementById('exitoNumParcelas').value) || 2;
+					const primeiroVencimento = document.getElementById('exitoPrimeiroVencimento').value;
+
+					if (isNaN(valorTotal) || valorTotal <= 0) {
+						Utils.showToast('Informe um valor total válido para parcelar.', 'error');
+						return;
+					}
+					if (!primeiroVencimento) {
+						Utils.showToast('Informe a data da 1ª parcela.', 'error');
+						return;
+					}
+
+					const parcelValue = valorTotal / numParcelas;
+					let currentDueDate = new Date(primeiroVencimento + 'T12:00:00Z');
+					const newParcels = [];
+					
+					for (let i = 0; i < numParcelas; i++) {
+						newParcels.push({
+							number: (contract.parcels?.length || 0) + i + 1,
+							value: parcelValue,
+							dueDate: new Date(currentDueDate).toISOString(),
+							status: 'Pendente',
+							valuePaid: 0,
+							paymentDate: null,
+							isExito: true
+						});
+						currentDueDate.setMonth(currentDueDate.getMonth() + 1);
+					}
+
+					const updatedParcels = [...(contract.parcels || []), ...newParcels];
+
+					const success = await this.firebaseService.updateContractField(contractId, {
+						parcels: updatedParcels,
+						successFeeParceled: true
+					});
+
+					if (success) {
+						this.closeModal('modalExito');
+						Utils.showToast('Êxito parcelado com sucesso!', 'success');
+						this.sendNotification(contract.advogadoResponsavel, {
+							message: `Êxito Parcelado (${Utils.formatCurrency(valorTotal)} em ${numParcelas}x) para ${contract.clientName}.`,
+							contractId: contractId,
+							sender: this.currentUserDisplayName
+						});
+					}
+				} else {
+					// Lógica original (À Vista)
+					const valueReceived = this.isUserAdmin ? Utils.parseNumber(document.getElementById('exitoValorRecebido').value) : 0;
 					if (this.isUserAdmin && (isNaN(valueReceived) || valueReceived <= 0)) {
 						Utils.showToast('Valor de êxito inválido.', 'error');
 						return;
@@ -2984,13 +3057,23 @@ class App {
 				const contract = this.database.contracts.find(c => c.id === contractId); if (!contract) return;
 				document.getElementById('exitoContractId').value = contractId;
 				const exitoInfoEl = document.getElementById('exitoInfo');
-				const valorRecebidoInput = document.getElementById('exitoValorRecebido');
+				
+				// Reset UI
+				document.getElementById('exitoValorRecebido').value = '';
+				document.getElementById('exitoValorTotal').value = '';
+				document.getElementById('exitoNumParcelas').value = '2';
+				document.getElementById('exitoPrimeiroVencimento').value = '';
+				
+				const radioAvista = document.querySelector('input[name="exitoModalidade"][value="avista"]');
+				if(radioAvista) radioAvista.checked = true;
+				document.getElementById('exitoFieldsAvista').classList.remove('hidden');
+				document.getElementById('exitoFieldsParcelado').classList.add('hidden');
 
 				exitoInfoEl.innerHTML = `<p><strong>Cliente:</strong> ${contract.clientName}</p><p><strong>Serviço:</strong> ${(contract.serviceTypes || []).map(s => s.name).join(', ')}</p><p><strong>Bonificação Prevista:</strong> <span class="font-bold text-indigo-400">${contract.successFee}</span></p>`;
 
-				valorRecebidoInput.value = '';
-				// A lógica de esconder/mostrar o CAMPO DE EDIÇÃO permanece
-				valorRecebidoInput.closest('.admin-only').style.display = this.isUserAdmin ? 'block' : 'none';
+				// A lógica de esconder/mostrar o CAMPO DE EDIÇÃO
+				const adminOnlyDiv = document.querySelector('#modalExito .admin-only');
+				if (adminOnlyDiv) adminOnlyDiv.style.display = this.isUserAdmin ? 'block' : 'none';
 				document.querySelector('#modalExito .non-admin-hidden').style.display = this.isUserAdmin ? 'none' : 'block';
 
 				this.openModal('modalExito');
