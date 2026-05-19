@@ -85,11 +85,11 @@ export class FirebaseService {
 			async addRecurringExpense(data) {
 				try {
 					const coll = collection(this.db, 'recurringExpenses');
-					await addDoc(coll, data);
-					return true;
+					const docRef = await addDoc(coll, data);
+					return docRef.id;
 				} catch (error) {
 					console.error("Erro ao adicionar recurringExpense:", error);
-					return false;
+					return null;
 				}
 			}
 

@@ -437,6 +437,7 @@ class App {
 				const form = document.getElementById('formDespesa');
 				form.reset();
 				document.getElementById('despesaId').value = '';
+				document.getElementById('despesaRecurringId').value = '';
 				document.getElementById('divDespesaPagamento').classList.add('hidden');
 
 				if (expenseId) {
@@ -444,6 +445,7 @@ class App {
 					if (exp) {
 						title.textContent = 'Editar Despesa';
 						document.getElementById('despesaId').value = exp.id;
+						document.getElementById('despesaRecurringId').value = exp.recurringExpenseId || '';
 						document.getElementById('despesaDescricao').value = exp.description;
 						document.getElementById('despesaCategoria').value = exp.category;
 						document.getElementById('despesaBanco').value = exp.bank || '';
@@ -474,6 +476,7 @@ class App {
 				btn.disabled = true;
 
 				const id = document.getElementById('despesaId').value;
+				const recurringId = document.getElementById('despesaRecurringId').value || null;
 				const isPaga = document.getElementById('despesaPaga').checked;
 				const isFixa = document.getElementById('despesaFixa').checked;
 
@@ -486,27 +489,53 @@ class App {
 					status: isPaga ? 'Paga' : 'Pendente',
 					paymentDate: isPaga ? document.getElementById('despesaDataPagamento').value : null,
 					isFixed: isFixa,
+					recurringExpenseId: recurringId,
 					updatedAt: new Date().toISOString()
 				};
 
+				if (!isFixa) {
+					data.recurringExpenseId = null;
+				}
+
 				let success = false;
 				if (id) {
-					success = await this.firebaseService.updateOfficeExpense(id, data);
-				} else {
-					data.createdAt = new Date().toISOString();
-					success = await this.firebaseService.addOfficeExpense(data);
-					
-					// Se for fixa e ainda não existir nos templates, adiciona
-					if (isFixa) {
-						const exists = this.database.recurringExpenses.some(r => r.description.toLowerCase() === data.description.toLowerCase());
+					if (isFixa && !data.recurringExpenseId) {
+						const exists = this.database.recurringExpenses.find(r => r.description.toLowerCase() === data.description.toLowerCase());
 						if (!exists) {
-							await this.firebaseService.addRecurringExpense({
+							const templateId = await this.firebaseService.addRecurringExpense({
 								description: data.description,
 								category: data.category,
 								defaultValue: data.value
 							});
+							if (templateId) {
+								data.recurringExpenseId = templateId;
+							}
+						} else {
+							data.recurringExpenseId = exists.id;
 						}
 					}
+					success = await this.firebaseService.updateOfficeExpense(id, data);
+				} else {
+					data.createdAt = new Date().toISOString();
+					
+					// Se for fixa e ainda não existir nos templates, adiciona
+					if (isFixa && !data.recurringExpenseId) {
+						const exists = this.database.recurringExpenses.find(r => r.description.toLowerCase() === data.description.toLowerCase());
+						if (!exists) {
+							const templateId = await this.firebaseService.addRecurringExpense({
+								description: data.description,
+								category: data.category,
+								defaultValue: data.value
+							});
+							if (templateId) {
+								data.recurringExpenseId = templateId;
+							}
+						} else {
+							data.recurringExpenseId = exists.id;
+						}
+					}
+					
+					success = await this.firebaseService.addOfficeExpense(data);
 				}
 
 				if (success) this.closeModal('modalDespesa');
@@ -535,7 +564,10 @@ class App {
 
 				// Para cada template, ver se já tem um registro real nesse mês
 				recurringTemplates.forEach(template => {
-					const alreadyPaid = realExpenses.some(e => e.description.toLowerCase() === template.description.toLowerCase());
+					const alreadyPaid = realExpenses.some(e => 
+						(e.recurringExpenseId === template.id) || 
+						(e.description.toLowerCase() === template.description.toLowerCase())
+					);
 					if (!alreadyPaid) {
 						// Adicionar item "Virtual" pendente
 						finalExpenses.push({
@@ -627,6 +659,7 @@ class App {
 				const form = document.getElementById('formDespesa');
 				form.reset();
 				document.getElementById('despesaId').value = ''; // Novo registro
+				document.getElementById('despesaRecurringId').value = template.id; // Link to template
 				
 				title.textContent = `Pagar Custa Fixa: ${template.description}`;
 				document.getElementById('despesaDescricao').value = template.description;
