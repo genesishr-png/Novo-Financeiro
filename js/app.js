@@ -558,6 +558,39 @@ class App {
 				
 				// Pegar os templates recorrentes
 				const recurringTemplates = this.database.recurringExpenses || [];
+
+				// Auto-vincular despesas fixas reais que não possuem recurringExpenseId
+				realExpenses.forEach(e => {
+					if (e.isFixed && !e.recurringExpenseId) {
+						let bestMatch = null;
+						let maxPrefixLen = 0;
+						const descE = e.description.toLowerCase().trim();
+
+						recurringTemplates.forEach(template => {
+							const descT = template.description.toLowerCase().trim();
+							
+							if (descE.startsWith(descT) || descT.startsWith(descE)) {
+								bestMatch = template;
+								maxPrefixLen = Math.min(descE.length, descT.length);
+							} else {
+								let len = 0;
+								while (len < descE.length && len < descT.length && descE[len] === descT[len]) {
+									len++;
+								}
+								if (len > maxPrefixLen) {
+									maxPrefixLen = len;
+									bestMatch = template;
+								}
+							}
+						});
+
+						if (bestMatch && maxPrefixLen >= 12) {
+							e.recurringExpenseId = bestMatch.id;
+							this.firebaseService.updateOfficeExpenseField(e.id, { recurringExpenseId: bestMatch.id })
+								.catch(err => console.error("Erro ao auto-vincular despesa fixa:", err));
+						}
+					}
+				});
 				
 				// Criar lista final
 				let finalExpenses = [...realExpenses];
