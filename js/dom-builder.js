@@ -96,17 +96,26 @@ export class DOMBuilder {
 		header.append(this.buildElement('p', { className: 'text-[11px] text-gray-400 mt-1 truncate', text: services }));
 		card.append(header);
 
+		let isParceledPending = false;
+		if (contract.successFeeParceled) {
+			const exitoParcels = (contract.parcels || []).filter(p => p.isExito);
+			if (exitoParcels.length > 0 && !exitoParcels.every(p => p.status === 'Paga')) {
+				isParceledPending = true;
+			}
+		}
+
 		// [MUDANÇA] Área de texto com altura fixa e line-clamp para harmonia visual
 		const infoDiv = this.buildElement('div', { className: 'flex-1 flex flex-col justify-start my-4 p-4 bg-gray-900/30 rounded-lg border border-gray-700/50 overflow-hidden' });
-		infoDiv.append(this.buildElement('p', { className: 'text-[10px] text-indigo-300 font-bold uppercase tracking-widest mb-2 flex-shrink-0', text: 'Bonificação Pendente' }));
+		const statusText = isParceledPending ? 'Bonificação Parcelada (Pendente)' : 'Bonificação Pendente';
+		infoDiv.append(this.buildElement('p', { className: 'text-[10px] text-indigo-300 font-bold uppercase tracking-widest mb-2 flex-shrink-0', text: statusText }));
 		infoDiv.append(this.buildElement('p', { className: 'text-sm font-medium text-white leading-relaxed line-clamp-6', text: taxaExitoDisplay }));
 		card.append(infoDiv);
 
 		const button = this.buildElement('button', {
 			className: 'w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold py-3 px-4 rounded-xl text-sm shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex items-center justify-center gap-2 mt-auto',
-			html: '<i class="fas fa-gavel"></i> Registar Recebimento'
+			html: isParceledPending ? 'Ver Detalhes' : '<i class="fas fa-gavel"></i> Registar / Parcelar'
 		});
-		button.onclick = () => window.App.openExitoModal(contract.id);
+		button.onclick = () => isParceledPending ? window.App.openContractModal(contract.id) : window.App.openExitoModal(contract.id);
 		card.append(button);
 
 		return card;

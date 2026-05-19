@@ -132,6 +132,19 @@ class App {
 				document.getElementById('formContrato').addEventListener('submit', this.handleContractSubmit.bind(this));
 				document.getElementById('formPagamento').addEventListener('submit', this.handlePaymentSubmit.bind(this));
 				document.getElementById('formExito').addEventListener('submit', this.handleExitoSubmit.bind(this));
+
+				// Pesquisa de Exitos
+				const searchExitoEl = document.getElementById('searchExito');
+				if (searchExitoEl) {
+					searchExitoEl.addEventListener('input', (e) => {
+						const term = e.target.value.toLowerCase();
+						const cards = document.querySelectorAll('#kanban-exito-wrapper .dark-card');
+						cards.forEach(card => {
+							const text = card.textContent.toLowerCase();
+							card.style.display = text.includes(term) ? 'flex' : 'none';
+						});
+					});
+				}
 				
 				// Toggle Parcelamento Exito
 				const radiosExito = document.querySelectorAll('input[name="exitoModalidade"]');
@@ -892,7 +905,15 @@ class App {
 						}
 					}
 
-					if (contract.successFee && !contract.successFeePaymentDate && !contract.successFeeParceled && (contract.parcels || []).filter(p => !p.isExito).every(p => p.status === 'Paga')) {
+					const hasExito = !!contract.successFee;
+					const exitoParcels = (contract.parcels || []).filter(p => p.isExito);
+					const allExitoPaid = exitoParcels.length > 0 && exitoParcels.every(p => p.status === 'Paga');
+					const isExitoPending = hasExito && !contract.successFeePaymentDate && !allExitoPaid;
+					
+					const normalParcels = (contract.parcels || []).filter(p => !p.isExito);
+					const normalParcelsAllPaid = normalParcels.length === 0 || normalParcels.every(p => p.status === 'Paga' || p.status === 'Quitado');
+
+					if (isExitoPending && normalParcelsAllPaid) {
 						fragExito.append(this.domBuilder.createExitoCard(contract));
 						exitoPendente++;
 					}
