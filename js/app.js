@@ -3001,10 +3001,15 @@ class App {
 						<h4 class="text-lg font-semibold mt-6 border-t border-gray-700 pt-4 text-orange-400">
 							<i class="fas fa-file-invoice mr-2"></i>Custas e Diligências
 						</h4>
-						<div class="grid grid-cols-2 gap-3 mt-3 mb-3">
+						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 mb-3">
 							<div class="dark-card p-3 rounded-lg border-l-4 border-purple-500 text-center">
 								<p class="text-xs text-gray-400 uppercase">Pagas pelo Escritório</p>
 								<p class="text-xl font-bold text-purple-400 mt-1">${Utils.formatCurrency(income.totalCustasEscritorio)}</p>
+								<p class="text-xs text-gray-500 mt-1">A reembolsar pelo cliente</p>
+							</div>
+							<div class="dark-card p-3 rounded-lg border-l-4 border-orange-500 text-center">
+								<p class="text-xs text-gray-400 uppercase">Pagas pelo Sócio</p>
+								<p class="text-xl font-bold text-orange-400 mt-1">${Utils.formatCurrency(income.totalCustasSocio || 0)}</p>
 								<p class="text-xs text-gray-500 mt-1">A reembolsar pelo cliente</p>
 							</div>
 							<div class="dark-card p-3 rounded-lg border-l-4 border-blue-500 text-center">
@@ -3023,6 +3028,14 @@ class App {
 								<span class="text-purple-300 font-semibold text-xs">${Utils.formatCurrency(d.valor)}</span>
 							</div>`;
 						});
+						if (c.custasSocio) {
+							c.custasSocio.forEach(d => {
+								custasHtml += `<div class="flex justify-between items-center py-1 border-b border-gray-700/50">
+									<span class="text-gray-300 text-xs"><span class="text-orange-400 mr-1"><i class="fas fa-user-tie"></i></span>${d.descricao} <span class="text-gray-500">(${Utils.formatDate(d.data)})</span></span>
+									<span class="text-orange-300 font-semibold text-xs">${Utils.formatCurrency(d.valor)}</span>
+								</div>`;
+							});
+						}
 						c.custasCliente.forEach(d => {
 							custasHtml += `<div class="flex justify-between items-center py-1 border-b border-gray-700/50">
 								<span class="text-gray-300 text-xs"><span class="text-blue-400 mr-1"><i class="fas fa-user-tie"></i></span>${d.descricao} <span class="text-gray-500">(${Utils.formatDate(d.data)})</span></span>
@@ -3131,8 +3144,15 @@ class App {
 				tag.dataset.paidBy = pagador;
 
 				const prazo = new Date(dueDate + "T12:00:00Z");
-				const pagadorColor = pagador === 'Cliente' ? 'text-blue-400 bg-blue-400/10' : 'text-purple-400 bg-purple-400/10';
-				const pagadorIcon = pagador === 'Cliente' ? '&#128100;' : '&#127970;';
+				let pagadorColor = 'text-purple-400 bg-purple-400/10';
+				let pagadorIcon = '&#127970;';
+				if (pagador === 'Cliente') {
+					pagadorColor = 'text-blue-400 bg-blue-400/10';
+					pagadorIcon = '&#128100;';
+				} else if (pagador === 'Socio' || pagador === 'Sócio') {
+					pagadorColor = 'text-orange-400 bg-orange-400/10';
+					pagadorIcon = '&#129489;&#128188;';
+				}
 				
 				tag.innerHTML = `
 					<div class="flex flex-col">
@@ -3482,6 +3502,11 @@ class App {
 						c.custasEscritorio.forEach(d => {
 							custasRows.push([c.clientName, d.descricao, Utils.formatDate(d.data), 'Escritorio', Utils.formatCurrency(d.valor)]);
 						});
+						if (c.custasSocio) {
+							c.custasSocio.forEach(d => {
+								custasRows.push([c.clientName, d.descricao, Utils.formatDate(d.data), 'Socio', Utils.formatCurrency(d.valor)]);
+							});
+						}
 						c.custasCliente.forEach(d => {
 							custasRows.push([c.clientName, d.descricao, Utils.formatDate(d.data), 'Cliente', Utils.formatCurrency(d.valor)]);
 						});
@@ -3500,7 +3525,14 @@ class App {
 						didParseCell: (hookData) => {
 							if (hookData.section === 'body' && hookData.column.index === 3) {
 								const isEscritorio = hookData.cell.raw === 'Escritorio';
-								hookData.cell.styles.textColor = isEscritorio ? [168, 85, 247] : [96, 165, 250];
+								const isSocio = hookData.cell.raw === 'Socio';
+								if (isEscritorio) {
+									hookData.cell.styles.textColor = [168, 85, 247];
+								} else if (isSocio) {
+									hookData.cell.styles.textColor = [217, 119, 6];
+								} else {
+									hookData.cell.styles.textColor = [96, 165, 250];
+								}
 								hookData.cell.styles.fontStyle = 'bold';
 							}
 						}
@@ -3557,6 +3589,7 @@ class App {
 						['  Receitas Avulsas', Utils.formatCurrency(data.totalReceitasAvulsas || 0)],
 						['Total Despesas do Escritorio', Utils.formatCurrency(data.totalDespesas || 0)],
 						['Custas Pagas pelo Escritorio (a reembolsar)', Utils.formatCurrency(data.totalCustasEscritorio || 0)],
+						['Custas Pagas por Sócios (a reembolsar)', Utils.formatCurrency(data.totalCustasSocio || 0)],
 						['Custas Pagas pelo Cliente (ja quitadas)', Utils.formatCurrency(data.totalCustasCliente || 0)],
 						['Inadimplencia no Periodo', Utils.formatCurrency(data.totalVencido)],
 						['Saldo Liquido', Utils.formatCurrency(data.saldoLiquido)],
@@ -3567,9 +3600,10 @@ class App {
 					didParseCell: (hook) => {
 						if (hook.section === 'body') {
 							const row = hook.row.index;
-							if (row === 8) { hook.cell.styles.fontStyle = 'bold'; hook.cell.styles.textColor = data.saldoLiquido >= 0 ? [22, 163, 74] : [220, 38, 38]; }
+							if (row === 9) { hook.cell.styles.fontStyle = 'bold'; hook.cell.styles.textColor = data.saldoLiquido >= 0 ? [22, 163, 74] : [220, 38, 38]; }
 							if (row === 4) { hook.cell.styles.textColor = [220, 38, 38]; }
 							if (row === 5) { hook.cell.styles.textColor = [168, 85, 247]; hook.cell.styles.fontStyle = 'bold'; }
+							if (row === 6) { hook.cell.styles.textColor = [217, 119, 6]; hook.cell.styles.fontStyle = 'bold'; }
 						}
 					}
 				});
@@ -3658,8 +3692,9 @@ class App {
 					head: [['Categoria', 'Total']],
 					body: [
 						['Custas Pagas pelo Escritorio (a reembolsar)', Utils.formatCurrency(data.totalCustasEscritorio)],
+						['Custas Pagas por Sócios (a reembolsar)', Utils.formatCurrency(data.totalCustasSocio || 0)],
 						['Custas Pagas pelo Cliente (ja quitadas)', Utils.formatCurrency(data.totalCustasCliente)],
-						['Total Geral de Custas', Utils.formatCurrency(data.totalCustasEscritorio + data.totalCustasCliente)]
+						['Total Geral de Custas', Utils.formatCurrency(data.totalCustasEscritorio + (data.totalCustasSocio || 0) + data.totalCustasCliente)]
 					],
 					theme: 'grid',
 					headStyles: { fillColor: [168, 85, 247] }
@@ -3683,11 +3718,31 @@ class App {
 					});
 				}
 
+				if (data.totalCustasSocio > 0) {
+					const startYVal = doc.autoTable.previous ? doc.autoTable.previous.finalY + 15 : 30;
+					doc.setFontSize(14);
+					doc.setTextColor(217, 119, 6);
+					doc.text('3.2 Reembolsos Pendentes (Pagos por Sócios)', 14, startYVal);
+					const reembolsoSocioRows = [];
+					(data.diligenciasPorContrato || []).forEach(c => {
+						(c.custasSocio || []).forEach(d => {
+							reembolsoSocioRows.push([c.clientName, c.advogado, d.descricao, Utils.formatDate(d.data), d.status || 'Pendente', Utils.formatCurrency(d.valor)]);
+						});
+					});
+					doc.autoTable({
+						startY: startYVal + 20,
+						head: [['Cliente', 'Advogado', 'Descricao', 'Data', 'Status', 'Valor']],
+						body: reembolsoSocioRows,
+						theme: 'striped',
+						headStyles: { fillColor: [217, 119, 6] }
+					});
+				}
+
 				if (data.totalCustasCliente > 0) {
 					const prevY = doc.autoTable.previous ? doc.autoTable.previous.finalY : 30;
 					doc.setFontSize(14);
 					doc.setTextColor(96, 165, 250); // azul
-					doc.text('3.2 Custas Pagas pelo Cliente', 14, prevY + 15);
+					doc.text('3.3 Custas Pagas pelo Cliente', 14, prevY + 15);
 					const clienteRows = [];
 					(data.diligenciasPorContrato || []).forEach(c => {
 						(c.custasCliente || []).forEach(d => {
@@ -3814,12 +3869,44 @@ class App {
 					}
 				});
 
-				// Pag 3 - Custas pagas pelo cliente (para conferência)
+				// Pag 3 - Reembolsos de Sócios (Pagas por Sócios)
+				if (data.totalCustasSocio > 0) {
+					doc.addPage();
+					doc.setTextColor(0);
+					doc.setFontSize(18);
+					doc.text('2. Reembolsos do Sócio', 14, 22);
+					doc.setFontSize(10);
+					doc.setTextColor(100);
+					doc.text(`Total Pendente Sócios: ${Utils.formatCurrency(data.totalCustasSocio)}`, 14, 30);
+
+					const rowsS = [];
+					(data.diligenciasPorContrato || []).forEach(c => {
+						(c.custasSocio || []).forEach(d => {
+							rowsS.push([c.clientName, c.advogado, d.descricao, Utils.formatDate(d.data), d.status || 'Pendente', Utils.formatCurrency(d.valor)]);
+						});
+					});
+
+					doc.autoTable({
+						startY: 35,
+						head: [['Cliente', 'Advogado', 'Descricao', 'Data', 'Status', 'Valor']],
+						body: rowsS,
+						theme: 'grid',
+						headStyles: { fillColor: [217, 119, 6] },
+						didParseCell: (hook) => {
+							if (hook.section === 'body' && hook.column.index === 4) {
+								hook.cell.styles.textColor = hook.cell.raw === 'Paga' ? [22, 163, 74] : [220, 38, 38];
+								hook.cell.styles.fontStyle = 'bold';
+							}
+						}
+					});
+				}
+
+				// Pag 4 - Custas pagas pelo cliente (para conferência)
 				if (data.totalCustasCliente > 0) {
 					doc.addPage();
 					doc.setFontSize(18);
 					doc.setTextColor(96, 165, 250);
-					doc.text('2. Custas Pagas pelo Cliente', 14, 22);
+					doc.text('3. Custas Pagas pelo Cliente', 14, 22);
 					doc.setFontSize(10);
 					doc.setTextColor(100);
 					doc.text(`Total ja quitado pelo cliente: ${Utils.formatCurrency(data.totalCustasCliente)}`, 14, 30);
@@ -3964,12 +4051,17 @@ class App {
 					
 					const isReimbursed = d.isReimbursed || false;
 					const paidByOffice = d.paidBy && (d.paidBy.toString().toLowerCase().includes('escritorio') || d.paidBy.toString().toLowerCase().includes('escritório'));
+					const paidBySocio = d.paidBy && (d.paidBy.toString().toLowerCase().includes('socio') || d.paidBy.toString().toLowerCase().includes('sócio'));
 					
 					let statusBadge = '';
 					if (paidByOffice) {
 						statusBadge = isReimbursed 
 							? '<span class="text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-bold ml-2">✓ REEMBOLSADO</span>'
 							: '<span class="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-bold ml-2">⚠ PENDENTE REEMBOLSO</span>';
+					} else if (paidBySocio) {
+						statusBadge = isReimbursed 
+							? '<span class="text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-bold ml-2">✓ REEMBOLSADO AO SÓCIO</span>'
+							: '<span class="text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-bold ml-2">⚠ PENDENTE REEMBOLSO SÓCIO</span>';
 					}
 
 					item.innerHTML = `
@@ -3978,7 +4070,7 @@ class App {
 							<span class="text-[11px] text-gray-500 mt-1 uppercase tracking-tight">${Utils.formatCurrency(d.value)} • ${Utils.formatDate(d.dueDate)} • PAGADOR: ${d.paidBy}</span>
 						</div>
 						<div class="flex items-center gap-3">
-							${paidByOffice ? `
+							${(paidByOffice || paidBySocio) ? `
 								<button type="button" class="px-3 py-1.5 rounded-lg text-xs ${isReimbursed ? 'bg-gray-700 text-gray-300' : 'bg-indigo-600 text-white shadow-lg'} font-bold transition-all hover:scale-105 active:scale-95" onclick="window.App.toggleReimbursementStatus('${contract.id}', ${realIndex})">
 									${isReimbursed ? 'ESTORNAR' : 'REEMBOLSADO'}
 								</button>

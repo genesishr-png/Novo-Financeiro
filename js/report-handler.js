@@ -10,7 +10,7 @@ export class ReportHandler {
 	// já vêm pré-filtrados pela classe App.
 	calculateIncomeByDateRange(startDate, endDate, contractsToRender) {
 		let totalParcelas = 0, totalExito = 0, totalVencido = 0, totalReembolsos = 0;
-		let totalCustasEscritorio = 0, totalCustasCliente = 0;
+		let totalCustasEscritorio = 0, totalCustasCliente = 0, totalCustasSocio = 0;
 		const detailedPayments = [];
 		const diligenciasPorContrato = [];
 		const byAdvogado = {};
@@ -38,6 +38,7 @@ export class ReportHandler {
 			// 2. Parcelas
 			const custasEscritorioContrato = [];
 			const custasClienteContrato = [];
+			const custasSocioContrato = [];
 
 			(contract.parcels || []).forEach(parcel => {
 				// === DILIGÊNCIAS: rastrear por quem pagou ===
@@ -55,6 +56,7 @@ export class ReportHandler {
 
 					// 1. Custo para o Escritório (na data que foi pago/vencimento)
 					const isPaidByOffice = pagador && (pagador.toString().toLowerCase().includes('escritorio') || pagador.toString().toLowerCase().includes('escritório'));
+					const isPaidBySocio = pagador && (pagador.toString().toLowerCase().includes('socio') || pagador.toString().toLowerCase().includes('sócio'));
 					
 					if (isPaidByOffice) {
 						if (dDue >= startDate && dDue <= endDate) {
@@ -76,6 +78,28 @@ export class ReportHandler {
 								});
 								totalReembolsos += parcel.value;
 								totalExito += parcel.value; // Agrupa em receitas para o cálculo do totalGeral
+								addData(byMonth, dReim, parcel.value);
+							}
+						}
+					} else if (isPaidBySocio) {
+						if (dDue >= startDate && dDue <= endDate) {
+							totalCustasSocio += parcel.value;
+							custasSocioContrato.push(entry);
+						}
+						
+						// Reembolso (na data que o cliente pagou de volta)
+						if (parcel.isReimbursed && parcel.reimbursementDate) {
+							const dReim = new Date(parcel.reimbursementDate);
+							if (dReim >= startDate && dReim <= endDate) {
+								detailedPayments.push({ 
+									type: 'Reembolso Diligência (Sócio)', 
+									clientName: contract.clientName, 
+									date: dReim, 
+									value: parcel.value, 
+									advogado: advogado 
+								});
+								totalReembolsos += parcel.value;
+								totalExito += parcel.value;
 								addData(byMonth, dReim, parcel.value);
 							}
 						}
@@ -116,12 +140,13 @@ export class ReportHandler {
 				}
 			});
 
-			if (custasEscritorioContrato.length > 0 || custasClienteContrato.length > 0) {
+			if (custasEscritorioContrato.length > 0 || custasClienteContrato.length > 0 || custasSocioContrato.length > 0) {
 				diligenciasPorContrato.push({
 					clientName: contract.clientName,
 					advogado,
 					custasEscritorio: custasEscritorioContrato,
-					custasCliente: custasClienteContrato
+					custasCliente: custasClienteContrato,
+					custasSocio: custasSocioContrato
 				});
 			}
 
@@ -187,6 +212,7 @@ export class ReportHandler {
 			saldoLiquido,
 			totalCustasEscritorio,
 			totalCustasCliente,
+			totalCustasSocio,
 			diligenciasPorContrato
 		};
 	}
