@@ -140,6 +140,8 @@ class App {
 						const isParcelado = e.target.value === 'parcelado';
 						document.getElementById('exitoFieldsAvista').classList.toggle('hidden', isParcelado);
 						document.getElementById('exitoFieldsParcelado').classList.toggle('hidden', !isParcelado);
+						const valorRecebidoInput = document.getElementById('exitoValorRecebido');
+						if (valorRecebidoInput) valorRecebidoInput.required = !isParcelado;
 					});
 				});
 
@@ -3063,6 +3065,8 @@ class App {
 				document.getElementById('exitoValorTotal').value = '';
 				document.getElementById('exitoNumParcelas').value = '2';
 				document.getElementById('exitoPrimeiroVencimento').value = '';
+				const valorRecebidoInput = document.getElementById('exitoValorRecebido');
+				if (valorRecebidoInput) valorRecebidoInput.required = true;
 				
 				const radioAvista = document.querySelector('input[name="exitoModalidade"][value="avista"]');
 				if(radioAvista) radioAvista.checked = true;
