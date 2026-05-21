@@ -85,6 +85,7 @@ class App {
 				this._initDOMReferences();
 				this.setupEventListeners();
 				this._setupModalAccessibility();
+				this._initTheme();
 				this._setupMonthFilters();
 				this._setupCurrencyMasks();
 				this.csvHandler.initialize();
@@ -168,6 +169,10 @@ class App {
 				const viewToggleButton = document.getElementById('view-toggle-button');
 				if (viewToggleButton) {
 					viewToggleButton.addEventListener('click', this.toggleViewMode.bind(this));
+				}
+				const themeToggleButton = document.getElementById('theme-toggle-button');
+				if (themeToggleButton) {
+					themeToggleButton.addEventListener('click', this.toggleTheme.bind(this));
 				}
 
 				// [INÍCIO DA ALTERAÇÃO - OFICINA]
@@ -382,6 +387,34 @@ class App {
 					this.firebaseService.stopOfficeExpensesListener(); // [NOVO]
 					this.firebaseService.stopRecurringExpensesListener(); // [NOVO]
 					// [FIM DA ALTERAÇÃO - OFICINA]
+				}
+			}
+			// [NOVO] Lógica de Tema (Claro/Escuro)
+			_initTheme() {
+				const savedTheme = localStorage.getItem('theme');
+				if (savedTheme === 'light') {
+					document.body.classList.add('light-theme');
+					this._updateThemeIcon('light');
+				} else {
+					this._updateThemeIcon('dark');
+				}
+			}
+
+			toggleTheme() {
+				const isLight = document.body.classList.toggle('light-theme');
+				localStorage.setItem('theme', isLight ? 'light' : 'dark');
+				this._updateThemeIcon(isLight ? 'light' : 'dark');
+			}
+
+			_updateThemeIcon(theme) {
+				const icon = document.getElementById('theme-toggle-icon');
+				if (!icon) return;
+				if (theme === 'light') {
+					icon.className = 'fas fa-moon text-indigo-600';
+					icon.parentElement.title = "Ativar Modo Escuro";
+				} else {
+					icon.className = 'fas fa-sun text-yellow-400';
+					icon.parentElement.title = "Ativar Modo Claro";
 				}
 			}
 
